@@ -3,12 +3,13 @@
   <br />
   {fullName()}
   <button @click="click()">+</button> <br />
-  <input type="text" :value="name()" @input="name($value)" />
+  <input type="text" *model="name" />
   <br />
   <input type="number" :value="someValue()" @input="someValue(+$value)" />
   <br />
-  <div @if="someValue()%2 ==0">покажись</div>
-  <div @for="value,i in someArr()">
+  <div *if="someValue()%2 ==0">покажись</div>
+  <div *else>покажись 2</div>
+  <div *for="value,i in someArr()">
     элемент {name()} {value()} {i}
     <component2 :test="value" />
   </div>

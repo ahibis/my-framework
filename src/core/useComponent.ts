@@ -1,5 +1,4 @@
-"str";
-import { signalContext, signalReturn, useSignal } from "./signal";
+import { signalReturn, useSignal } from "./signal";
 
 type componentContext = Record<string, unknown>;
 
@@ -7,8 +6,10 @@ function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
 
-function handleElement(element: ChildNode, ctx: componentContext) {
+function handleElement(element: Node, ctx: componentContext) {
   const childs = [element];
+
+  let lastIfResult: signalReturn<boolean> | undefined = undefined;
   while (childs.length > 0) {
     const child = childs.shift()!;
 
@@ -47,9 +48,9 @@ function handleElement(element: ChildNode, ctx: componentContext) {
       });
 
       child.replaceWith(...elements);
-
       continue;
     }
+
     if (child instanceof HTMLElement) {
       if (
         child.localName in ctx &&
@@ -73,15 +74,16 @@ function handleElement(element: ChildNode, ctx: componentContext) {
       }
       const attributes = [...child.attributes];
       let handleChilds = true;
+
       for (let i = 0; i < attributes.length; i++) {
         const attribute = attributes[i];
         const name = attribute.name;
         const key = name.substring(1, name.length);
         const value = attribute.value;
         const func = evalFunc(value);
-
-        if (name.startsWith("@")) {
-          if (name === "@for") {
+        // служебные директивы
+        if (name.startsWith("*")) {
+          if (name === "*for") {
             handleChilds = false;
             const [valueWithKey, code] = value.split(" in ");
             const [valueKey, indexKeyRaw] = valueWithKey.split(",");
@@ -141,10 +143,11 @@ function handleElement(element: ChildNode, ctx: componentContext) {
             break;
           }
 
-          if (name === "@if") {
+          if (name === "*if") {
             let prevChild: Node = document.createComment("");
             let prevState: boolean = true;
             child.removeAttribute(name);
+            lastIfResult = useSignal(() => !!func(ctx));
             useSignal(() => {
               const state = !!func(ctx);
               console.log(state);
@@ -160,7 +163,40 @@ function handleElement(element: ChildNode, ctx: componentContext) {
 
             continue;
           }
-
+          if (name === "*else") {
+            let prevChild: Node = document.createComment("");
+            let prevState: boolean = false;
+            child.removeAttribute(name);
+            useSignal(() => {
+              if (lastIfResult === undefined) return;
+              const state = !lastIfResult();
+              console.log(state);
+              if (prevState !== state) {
+                if (!state) {
+                  child.parentElement?.replaceChild(prevChild, child)!;
+                } else {
+                  prevChild.parentElement?.replaceChild(child, prevChild)!;
+                }
+                prevState = state;
+              }
+            });
+            continue;
+          }
+          if (name === "*model") {
+            const signal = func(ctx);
+            useSignal(() => {
+              const res = signal();
+              child.setAttribute("value", res);
+            });
+            child.addEventListener("input", (event) => {
+              signal((event.target as HTMLInputElement)?.value);
+            });
+            child.removeAttribute(name);
+            continue;
+          }
+        }
+        // обработка событий
+        if (name.startsWith("@")) {
           child.addEventListener(key, (event) => {
             let newCtx = {
               ...ctx,
@@ -174,7 +210,65 @@ function handleElement(element: ChildNode, ctx: componentContext) {
           });
           child.removeAttribute(name);
         }
+        // обработка атрибутов
         if (name.startsWith(":")) {
+          if (name === ":style") {
+            useSignal(() => {
+              const res = func(ctx);
+              if (res instanceof Object) {
+                child.setAttribute(
+                  key,
+                  Object.entries(res)
+                    .map(([key, value]) => `${key}:${value};`)
+                    .join("")
+                );
+                return;
+              }
+              child.setAttribute(key, res);
+            });
+            child.removeAttribute(name);
+            continue;
+          }
+          if (name === ":class") {
+            useSignal(() => {
+              const res = func(ctx);
+              if (res instanceof Array) {
+                child.setAttribute(key, res.join(" "));
+                return;
+              }
+              if (res instanceof Object) {
+                child.setAttribute(
+                  key,
+                  Object.entries(res)
+                    .filter(([key, value]) => value)
+                    .map(([key]) => key)
+                    .join(" ")
+                );
+                return;
+              }
+              child.setAttribute(key, res);
+            });
+            child.removeAttribute(name);
+            continue;
+          }
+          if (name === ":bind") {
+            useSignal(() => {
+              const res = func(ctx) as Record<string, string>;
+              Object.entries(res).forEach(([key, value]) => {
+                child.setAttribute(key, value);
+              });
+            });
+            child.removeAttribute(name);
+            continue;
+          }
+          if (name === ":ref") {
+            const res = func(ctx) as (element: HTMLElement) => void;
+            res(child);
+
+            child.removeAttribute(name);
+            continue;
+          }
+
           useSignal(() => {
             const res = func(ctx);
 
@@ -200,9 +294,10 @@ function useComponent<T extends object>(
 ) {
   return (params?: T) => {
     const ctx = setup(params || ({} as T));
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, "text/html");
-    const virtualDOM = doc.body.firstChild;
+    const element = document.createElement("div");
+    const shadowRoot = element.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = htmlString;
+    const virtualDOM = shadowRoot;
     if (virtualDOM) {
       handleElement(virtualDOM, ctx);
     }
