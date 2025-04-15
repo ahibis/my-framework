@@ -1,4 +1,4 @@
-> Every self-respecting frontend developer eventually writes their own framework — > it's the JavaScript version of a midlife crisis. 😎🛠️
+> Every self-respecting frontend developer eventually writes their own framework 
 
 # 🔮 Reactive Front-End Library
 
