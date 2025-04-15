@@ -1,4 +1,4 @@
-
+> Every self-respecting frontend developer eventually writes their own framework — > it's the JavaScript version of a midlife crisis. 😎🛠️
 
 # 🔮 Reactive Front-End Library
 
@@ -34,6 +34,8 @@ count(prev => prev + 1); // update
 
 // Computed
 const double = useSignal(() => count() * 2);
+// Watch
+useSignal(() => count() * 2);
 ```
 
 ---
@@ -45,7 +47,7 @@ const double = useSignal(() => count() * 2);
 Defines a component with an HTML template and setup function.
 
 ```ts
-const MyComponent = createComponent('<div>{{ message }}</div>', ({ message }) => {
+const MyComponent = createComponent('<div>{ message }</div>', ({ message }) => {
   return {};
 });
 
@@ -173,13 +175,13 @@ Used after `*if` to provide an alternative block.
 Loops over an array, rendering the block for each item.
 
 ```html
-<div *for="item, i in items">{{ item }}</div>
+<div *for="item, i in items">{ item ()}</div>
 ```
 
 Supports signals as sources too:
 
 ```html
-<div *for="item, i in itemsSignal">Item: {{ item }}</div>
+<div *for="item, i in itemsSignal">Item: { item() } key: { i }</div>
 ```
 
 ---
@@ -192,7 +194,7 @@ Binds an input element to a signal.
 
 ```html
 <input *model="name" />
-<p>Hello, {{ name() }}</p>
+<p>Hello, { name() }</p>
 ```
 
 ---
@@ -345,7 +347,7 @@ onMounted(() => {
 </script>
 
 <div *if="visible">
-  <h1>Hello, {{ name() }}!</h1>
+  <h1>Hello, { name() }!</h1>
   <input *model="name" />
 </div>
 <div *else>
