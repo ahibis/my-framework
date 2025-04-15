@@ -55,6 +55,94 @@ MyComponent({ message: 'Hello' }, elements);
 
 ---
 
+## 🧬 Slots & Templates
+
+Components support **slots** and named templates similar to Vue.
+
+### Basic Slot Usage
+
+#### **Parent**
+
+```html
+<Child>
+  Some content
+</Child>
+```
+
+#### **Child Component Template**
+
+```html
+<slot></slot>
+```
+
+### Named Slots with `<template name="...">`
+
+#### **Parent**
+
+```html
+<Child>
+  Default content
+  <template name="head">Header Slot</template>
+  <template name="body">Body Slot</template>
+</Child>
+```
+
+#### **Child Template**
+
+```html
+<slot></slot> <!-- unnamed (default) slot -->
+<slot name="head"></slot>
+<slot name="body"></slot>
+```
+
+### Accessing Slots in Component Code
+
+You can access and render all passed slots via the second argument of the component function.
+
+```ts
+const component = createComponent(`
+  <slot></slot>
+  <slot name="head"></slot>
+  <slot name="body"></slot>
+`, () => {
+  return {};
+});
+
+// Rendering with slot content manually:
+component({}, {
+  "": [new Text("default content")],
+  "head": [new Text("Header")],
+  "body": [new Text("Body")]
+});
+```
+
+Slots are passed as a `Record<string, NodeList>` where the empty string key `""` refers to the default slot.
+
+---
+
+## 🔗 Directives
+
+### Conditional Rendering
+
+#### `*if="value: boolean"`
+
+Renders the element if the condition is `true`.
+
+```html
+<div *if="isVisible">Visible content</div>
+```
+
+#### `*else`
+
+Used after `*if` to provide an alternative block.
+
+```html
+<div *if="isVisible">Shown</div>
+<div *else>Hidden</div>
+```
+
+---
+
 ## 🔗 Directives
 
 ### Conditional Rendering
@@ -270,7 +358,6 @@ onMounted(() => {
 ## 🔧 Coming Soon
 
 - Transitions
-- Slots
 - Async components
 
 ---
@@ -278,4 +365,3 @@ onMounted(() => {
 ## 📜 License
 
 MIT
-```
