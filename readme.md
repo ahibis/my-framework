@@ -1,5 +1,5 @@
 
-```markdown
+
 # 🔮 Reactive Front-End Library
 
 A lightweight reactive JavaScript front-end library inspired by **Solid.js** and **Vue**. This framework provides a fine-grained reactivity system and intuitive declarative syntax via directives and lifecycle hooks.
