@@ -1,8 +1,14 @@
 {
   "name": "my-framework",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "ahibis<pokesteve31@gmail.com>",
+    "url": "https://github.com/ahibis"
+  },
+  "description": "A lightweight reactive front-end framework inspired by Vue and Solid.js. Features fine-grained reactivity, directives, component system, and support for slots and templates — built for developers who believe in writing their own engine at least once.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
