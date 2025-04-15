@@ -1,0 +1,20 @@
+<div>
+  {name() +1}
+  <br />
+  {fullName()}
+  <button @click="click()">+</button> <br />
+  <input type="text" :value="name()" @input="name($value)" />
+  <br />
+  <input type="number" :value="someValue()" @input="someValue(+$value)" />
+  <br />
+  <div @if="someValue()%2 ==0">покажись</div>
+  <div @for="value,i in someArr()">
+    элемент {name()} {value()} {i}
+    <component2 :test="value" />
+  </div>
+
+  <button @click="someArr(arr=>[...arr, 1])">add</button> <br />
+  <button @click="someArr(arr=>(arr.pop(),arr))">remove</button>
+  <button @click="multiply()">увеличить</button>
+  {someValue()} {nameWithValue()}
+</div>
