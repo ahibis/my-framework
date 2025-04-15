@@ -1,8 +1,8 @@
 import component2 from "../component2/component2";
-import { useComponent, useSignal } from "../core";
+import { createComponent, useSignal, onMounted } from "../core";
 import text from "./component.html?raw";
 
-const myComponent = useComponent(text, () => {
+const myComponent = createComponent(text, () => {
   const name = useSignal("World");
   const someValue = useSignal(45);
   const someArr = useSignal([1, 2, 3]);
@@ -16,6 +16,9 @@ const myComponent = useComponent(text, () => {
   function click() {
     name((value) => value + 1);
   }
+  onMounted(() => {
+    console.log("отрисовался");
+  });
   return {
     name,
     fullName,

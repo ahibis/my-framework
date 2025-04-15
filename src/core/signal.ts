@@ -47,9 +47,9 @@ const signalContext = new SignalContext();
 
 type computedFunc<T> = (recordMode: (isRecord: boolean) => void) => T;
 type changeFunc<T> = (value: T) => T;
-type signalReturn<T> = (value1?: T | changeFunc<T>) => T;
+type Signal<T> = (value1?: T | changeFunc<T>) => T;
 
-function useSignal<T>(value: T | computedFunc<T>): signalReturn<T> {
+function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
   const key = signalContext.signalCountIncrement();
   let $value: T;
   if (typeof value === "function") {
@@ -95,4 +95,4 @@ function useSignal<T>(value: T | computedFunc<T>): signalReturn<T> {
   };
 }
 
-export { useSignal, type signalReturn, signalContext };
+export { useSignal, type Signal as signalReturn, signalContext };

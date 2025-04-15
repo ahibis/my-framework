@@ -1,2 +1,2 @@
 export { useSignal } from "./signal.ts";
-export { useComponent } from "./useComponent.ts";
+export { createComponent, onMounted } from "./createComponent.ts";

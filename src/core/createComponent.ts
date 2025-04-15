@@ -1,17 +1,18 @@
 import { signalReturn, useSignal } from "./signal";
-
-type componentContext = Record<string, unknown>;
-
 function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
 
-function handleElement(element: Node, ctx: componentContext) {
-  const childs = [element];
+function handleElement(
+  element: Node,
+  ctx: componentContext,
+  providedElements: Record<string, NodeList>
+) {
+  const childrenQueue = [element];
 
   let lastIfResult: signalReturn<boolean> | undefined = undefined;
-  while (childs.length > 0) {
-    const child = childs.shift()!;
+  while (childrenQueue.length > 0) {
+    const child = childrenQueue.shift()!;
 
     if (child instanceof Text) {
       const data = child.nodeValue;
@@ -52,6 +53,16 @@ function handleElement(element: Node, ctx: componentContext) {
     }
 
     if (child instanceof HTMLElement) {
+      if (child.localName === "slot") {
+        const slotName = child.getAttribute("name");
+        if (slotName == null) {
+          child.replaceWith(...providedElements[""]);
+          continue;
+        }
+        if (slotName in providedElements) {
+          child.replaceWith(...providedElements[slotName]);
+        }
+      }
       if (
         child.localName in ctx &&
         typeof ctx[child.localName] === "function"
@@ -66,10 +77,39 @@ function handleElement(element: Node, ctx: componentContext) {
           })
         );
         const elementFunc = ctx[child.localName] as (
-          params: Record<string, unknown>
+          params: Record<string, unknown>,
+          elements: Record<string, NodeList>
         ) => HTMLElement;
-        const element = elementFunc(params);
+        const childrens = [...child.childNodes];
+        const elementsRecord: Record<string, NodeList> = {
+          "": child.childNodes,
+        };
+        childrens.forEach((templateEl) => {
+          if (
+            !(
+              templateEl instanceof HTMLElement &&
+              templateEl.localName === "template" &&
+              templateEl.hasAttribute("name")
+            )
+          )
+            return;
+          const name = (templateEl as HTMLElement).getAttribute("name")!;
+          elementsRecord[name] = templateEl.childNodes;
+          childrenQueue.push(...templateEl.childNodes);
+        });
+        childrenQueue.push(
+          ...childrens.filter(
+            (child) =>
+              !(
+                child instanceof HTMLElement &&
+                child.localName === "template" &&
+                child.hasAttribute("name")
+              )
+          )
+        );
+        const element = elementFunc(params, elementsRecord);
         child.replaceWith(element);
+        componentStateStack[componentStateStack.length - 1].onMounted();
         continue;
       }
       const attributes = [...child.attributes];
@@ -101,11 +141,15 @@ function handleElement(element: Node, ctx: componentContext) {
                 reactiveValues = res.map((item) => useSignal(item));
                 elements = res.map((item, i) => {
                   const element = child.cloneNode(true) as HTMLElement;
-                  handleElement(element, {
-                    ...ctx,
-                    [valueKey.trim()]: reactiveValues[i],
-                    [indexKey.trim()]: i,
-                  });
+                  handleElement(
+                    element,
+                    {
+                      ...ctx,
+                      [valueKey.trim()]: reactiveValues[i],
+                      [indexKey.trim()]: i,
+                    },
+                    {}
+                  );
                   return element;
                 });
                 child.replaceWith(...elements);
@@ -128,11 +172,15 @@ function handleElement(element: Node, ctx: componentContext) {
               const newElements = res.slice(elements.length).map((item, i) => {
                 const element = prevChild.cloneNode(true) as HTMLElement;
                 const index = elements.length + i;
-                handleElement(element, {
-                  ...ctx,
-                  [valueKey.trim()]: reactiveValues[index],
-                  [indexKey.trim()]: index,
-                });
+                handleElement(
+                  element,
+                  {
+                    ...ctx,
+                    [valueKey.trim()]: reactiveValues[index],
+                    [indexKey.trim()]: index,
+                  },
+                  {}
+                );
                 return element;
               });
               if (newElements.length > 0) {
@@ -268,6 +316,13 @@ function handleElement(element: Node, ctx: componentContext) {
             child.removeAttribute(name);
             continue;
           }
+          if (name === ":html") {
+            useSignal(() => {
+              const res = func(ctx) as string;
+              (child as HTMLElement).innerHTML = res;
+            });
+            continue;
+          }
 
           useSignal(() => {
             const res = func(ctx);
@@ -283,25 +338,39 @@ function handleElement(element: Node, ctx: componentContext) {
     }
 
     if (child?.childNodes.length > 0) {
-      childs.push(...child.childNodes);
+      childrenQueue.push(...child.childNodes);
     }
   }
 }
 
-function useComponent<T extends object>(
+type componentContext = Record<string, unknown>;
+
+interface componentState {
+  onMounted: () => void;
+}
+const componentStateStack: componentState[] = [];
+
+function createComponent<T extends object>(
   htmlString: string,
   setup: (params: T) => componentContext
 ) {
-  return (params?: T) => {
-    const ctx = setup(params || ({} as T));
+  return (params: T, elements: Record<string, NodeList>) => {
+    const componentState = { onMounted: () => {} };
+    componentStateStack.push(componentState);
+    const ctx = setup(params);
     const element = document.createElement("div");
     const shadowRoot = element.attachShadow({ mode: "open" });
     shadowRoot.innerHTML = htmlString;
     const virtualDOM = shadowRoot;
     if (virtualDOM) {
-      handleElement(virtualDOM, ctx);
+      handleElement(virtualDOM, ctx, elements);
     }
+    componentStateStack.pop();
     return virtualDOM!;
   };
 }
-export { useComponent };
+function onMounted(func: () => void) {
+  if (componentStateStack.length == 0) throw new Error("no component");
+  componentStateStack[componentStateStack.length - 1].onMounted = func;
+}
+export { createComponent, onMounted };

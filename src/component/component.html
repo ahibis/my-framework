@@ -11,7 +11,9 @@
   <div *else>покажись 2</div>
   <div *for="value,i in someArr()">
     элемент {name()} {value()} {i}
-    <component2 :test="value" />
+    <component2 :test="value">
+      <div>еще {name()}</div>
+    </component2>
   </div>
 
   <button @click="someArr(arr=>[...arr, 1])">add</button> <br />
