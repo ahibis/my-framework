@@ -364,6 +364,32 @@ onMounted(() => {
 
 ---
 
+## 🧾 Feature Summary
+
+| Feature Name      | Type          | Description                                   | Example                                       |
+| ----------------- | ------------- | --------------------------------------------- | --------------------------------------------- |
+| `useSignal`       | Reactive API  | Creates a reactive signal or computed value   | `const count = useSignal(0)`                  |
+| `createComponent` | Component API | Defines a new component with template & setup | `createComponent("<div></div>", () => {})`    |
+| `*if`             | Directive     | Conditional rendering                         | `<div *if="visible">Shown</div>`              |
+| `*else`           | Directive     | Fallback for `*if`                            | `<div *else>Hidden</div>`                     |
+| `*for`            | Directive     | Iterates over a list                          | `<li *for="item, i in items">{{ item }}</li>` |
+| `*model`          | Directive     | Two-way binding for inputs                    | `<input *model="name" />`                     |
+| `:[attr]`         | Directive     | Dynamically bind an attribute                 | `<a :href="url">Link</a>`                     |
+| `:bind`           | Directive     | Bind multiple attributes from object          | `<img :bind="{ src, alt }" />`                |
+| `:ref`            | Directive     | Creates a reference to an element             | `<div :ref="boxRef"></div>`                   |
+| `:class` (array)  | Directive     | Apply multiple classes                        | `<div :class="['active', 'bold']">`           |
+| `:class` (object) | Directive     | Conditional classes                           | `<div :class="{ active: isActive }">`         |
+| `:style` (object) | Directive     | Inline style via object                       | `<div :style="{ color: 'red' }">`             |
+| `:html`           | Directive     | Set raw innerHTML (⚠️ unsafe)                  | `<div :html="htmlContent"></div>`             |
+| `@[event]`        | Directive     | Bind DOM event                                | `<button @click="handleClick">`               |
+| `$value`          | Special Var   | Input value in event handler                  | `<input @input="name($value)" />`             |
+| `$event`          | Special Var   | Access event object                           | `<button @click="console.log($event)">`       |
+| `onMounted`       | Lifecycle     | Called when component is mounted              | `onMounted(() => console.log('ready'))`       |
+| `<slot>`          | Template      | Inserts content from parent component         | `<slot></slot>`                               |
+| `<template name>` | Template      | Named slot for structured content             | `<template name="header">Header</template>`   |
+
+---
+
 ## 📜 License
 
 MIT
