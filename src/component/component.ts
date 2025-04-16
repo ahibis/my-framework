@@ -10,8 +10,10 @@ const myComponent = createComponent(text, () => {
     someArr((arr) => arr.map((value) => value * 2));
   }
 
-  const fullName = () => name() + " Вася";
-  const nameWithValue = useSignal(() => name() + " " + someValue());
+  const fullName = useSignal(() => {
+    console.log("fullName");
+    return name() + " Вася";
+  });
 
   function click() {
     name((value) => value + 1);
@@ -25,7 +27,6 @@ const myComponent = createComponent(text, () => {
     click,
     component2,
     someValue,
-    nameWithValue,
     someArr,
     multiply,
   };

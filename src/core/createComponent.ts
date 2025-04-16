@@ -196,7 +196,6 @@ function handleElement(
             lastIfResult = useSignal(() => !!func(ctx));
             useSignal(() => {
               const state = !!func(ctx);
-              console.log(state);
               if (prevState !== state) {
                 if (!state) {
                   child.parentElement?.replaceChild(prevChild, child)!;

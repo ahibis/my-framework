@@ -38,10 +38,30 @@ useSignal(()=>{
   })
   signal5()
 }
+```
 parent useSignal subscribe to signal1, signal2, signal3
 child usSignal subscribe to signal3, signal4
-since the parent useSignal calls the function every time the subscribed signals change, the child signal will be recreated each time and the subscribers will be re-registered. In this regard, it is worth using this technique as rarely as possible.
 
-signal.subscribers  contain all computed function
+```ts
+const name = useSignal("Bob");
+const secondName = usSignal("Bob")
+const fullname = useSignal(()=>name()+secondName());
+```
+```html
+<div>{fullname()}</div>
+<div>{fullname()+" hi"}</div>
+<div>{fullname()+" hello"}</div>
+```
+so if you don't wrap fullname in useSignal, the next fullname() will be called 3 times when changing the name, otherwise 1.
 
+don't make this
+```ts
+const b = useSignal(()=>{
+  console.log("a")
+  const a = useSignal(()=>{
+    console.log("b");
+    return name()
+  })
+  a()
+})
 ```
