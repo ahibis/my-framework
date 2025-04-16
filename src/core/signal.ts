@@ -12,27 +12,23 @@ class SignalContext {
       this.subscribers[key].forEach((callback) => callback());
     }
   }
-  recordContext: Record<number, Set<number>> = {};
-  recordKeys: Set<number> = new Set();
-  startRecord(key: number) {
-    this.recordContext[key] = new Set();
-    this.recordKeys.add(key);
+  currentWatchedKeys?: Set<number>;
+  watchedKeysStack: Set<number>[] = [];
+  startRecord() {
+    const watchedKeys: Set<number> = new Set();
+    this.currentWatchedKeys = watchedKeys;
+    this.watchedKeysStack.push(watchedKeys);
   }
-  endRecord(key: number) {
-    const keys = this.recordContext[key];
-    delete this.recordContext[key];
-    this.recordKeys.delete(key);
-    return keys;
+  endRecord() {
+    const watchedKeys = this.currentWatchedKeys;
+    this.watchedKeysStack.pop();
+    this.currentWatchedKeys = this.watchedKeysStack.at(-1)!;
+    return watchedKeys!;
   }
-  stopRecord(key: number) {
-    this.recordKeys.delete(key);
-  }
-  restartRecord(key: number) {
-    this.recordKeys.add(key);
-  }
+
   addRecord(key: number) {
-    for (let record of this.recordKeys) {
-      this.recordContext[record].add(key);
+    if (this.currentWatchedKeys) {
+      this.currentWatchedKeys.add(key);
     }
   }
 
@@ -45,7 +41,7 @@ class SignalContext {
 }
 const signalContext = new SignalContext();
 
-type computedFunc<T> = (recordMode: (isRecord: boolean) => void) => T;
+type computedFunc<T> = () => T;
 type changeFunc<T> = (value: T) => T;
 type Signal<T> = (value1?: T | changeFunc<T>) => T;
 
@@ -53,19 +49,12 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
   const key = signalContext.signalCountIncrement();
   let $value: T;
   if (typeof value === "function") {
-    const changeRecord = (isRecord: boolean) => {
-      if (isRecord) {
-        signalContext.restartRecord(key);
-      } else {
-        signalContext.stopRecord(key);
-      }
-    };
     const f = value as computedFunc<T>;
-    signalContext.startRecord(key);
-    $value = f(changeRecord);
-    const keys = signalContext.endRecord(key);
+    signalContext.startRecord();
+    $value = f();
+    const keys = signalContext.endRecord();
     signalContext.subscribe(keys, () => {
-      $value = f(changeRecord);
+      $value = f();
       signalContext.emit(key);
     });
     return () => {
@@ -95,4 +84,63 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
   };
 }
 
-export { useSignal, type Signal as signalReturn, signalContext };
+let lastManipulation:
+  | [Record<string | symbol, unknown>, string | symbol]
+  | undefined;
+function useReactive<T extends object>(value: T) {
+  if (value instanceof Array) {
+    const signalKey = signalContext.signalCountIncrement();
+    return new Proxy(value, {
+      set: (target, key, value) => {
+        target[key as keyof T] = value;
+        signalContext.emit(signalKey);
+        return true;
+      },
+      get: (target, key) => {
+        signalContext.addRecord(signalKey);
+        return target[key as keyof T];
+      },
+    });
+  }
+  const paramsToSignalKey: Map<string | symbol, number> = new Map();
+  const proxy = new Proxy(value, {
+    set: (target, key, value) => {
+      target[key as keyof T] = value;
+      let signalKey = paramsToSignalKey.get(key);
+      if (signalKey == undefined) {
+        signalKey = signalContext.signalCountIncrement();
+        paramsToSignalKey.set(key, signalKey);
+      }
+      signalContext.emit(signalKey);
+      return true;
+    },
+    get(target, key) {
+      let signalKey = paramsToSignalKey.get(key);
+      if (signalKey == undefined) {
+        signalKey = signalContext.signalCountIncrement();
+        paramsToSignalKey.set(key, signalKey);
+      }
+      lastManipulation = [proxy as Record<string | symbol, unknown>, key];
+      signalContext.addRecord(signalKey);
+      return target[key as keyof T];
+    },
+  });
+  return proxy;
+}
+function useReactiveSignal<T extends object>(value: T) {
+  return useSignal(useReactive(value));
+}
+function getLastManipulation() {
+  return lastManipulation;
+}
+
+export {
+  useSignal,
+  useReactive,
+  useReactiveSignal,
+  getLastManipulation,
+  signalContext,
+  type Signal,
+  type changeFunc,
+  type computedFunc,
+};

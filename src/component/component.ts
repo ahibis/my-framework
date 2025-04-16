@@ -10,7 +10,7 @@ const myComponent = createComponent(text, () => {
     someArr((arr) => arr.map((value) => value * 2));
   }
 
-  const fullName = useSignal(() => name() + " Вася");
+  const fullName = () => name() + " Вася";
   const nameWithValue = useSignal(() => name() + " " + someValue());
 
   function click() {

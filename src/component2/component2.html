@@ -1,4 +1,8 @@
 <div>
   <div>тестовый компонент {test()}</div>
+  <div @click="obj.test = 'test2'">
+    test:{obj.test} <input *model="obj.test" />
+  </div>
+  <div @click="obj.test1 = 'test3'">test1:{obj.test1}</div>
   <slot></slot>
 </div>

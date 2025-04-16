@@ -1,4 +1,4 @@
-import { signalReturn, useSignal } from "./signal";
+import { getLastManipulation, Signal, useSignal } from "./signal";
 function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
@@ -10,7 +10,7 @@ function handleElement(
 ) {
   const childrenQueue = [element];
 
-  let lastIfResult: signalReturn<boolean> | undefined = undefined;
+  let lastIfResult: Signal<boolean> | undefined = undefined;
   while (childrenQueue.length > 0) {
     const child = childrenQueue.shift()!;
 
@@ -109,7 +109,6 @@ function handleElement(
         );
         const element = elementFunc(params, elementsRecord);
         child.replaceWith(element);
-        componentStateStack[componentStateStack.length - 1].onMounted();
         continue;
       }
       const attributes = [...child.attributes];
@@ -131,12 +130,11 @@ function handleElement(
             const func = evalFunc(code);
             let isInit = true;
             let elements: HTMLElement[] = [];
-            let reactiveValues: signalReturn<string>[] = [];
+            let reactiveValues: Signal<string>[] = [];
             child.removeAttribute(name);
             const prevChild = child.cloneNode(true) as HTMLElement;
-            useSignal((changeObserveMode) => {
+            useSignal(() => {
               const res = func(ctx) as string[];
-              changeObserveMode(false);
               if (isInit) {
                 reactiveValues = res.map((item) => useSignal(item));
                 elements = res.map((item, i) => {
@@ -231,13 +229,27 @@ function handleElement(
             continue;
           }
           if (name === "*model") {
-            const signal = func(ctx);
+            const signal = func(ctx) as Signal<string> | string;
+            if (signal instanceof Function) {
+              useSignal(() => {
+                const res = signal();
+                child.setAttribute("value", res);
+              });
+              child.addEventListener("input", (event) => {
+                signal((event.target as HTMLInputElement)?.value);
+              });
+              child.removeAttribute(name);
+              continue;
+            }
+            const manipulation = getLastManipulation();
+            if (!manipulation) continue;
+            const key = manipulation[1];
+            const target = manipulation[0];
             useSignal(() => {
-              const res = signal();
-              child.setAttribute("value", res);
+              child.setAttribute("value", target[key] as string);
             });
             child.addEventListener("input", (event) => {
-              signal((event.target as HTMLInputElement)?.value);
+              target[key] = (event.target as HTMLInputElement)?.value;
             });
             child.removeAttribute(name);
             continue;
