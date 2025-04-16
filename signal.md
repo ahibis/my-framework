@@ -42,5 +42,6 @@ parent useSignal subscribe to signal1, signal2, signal3
 child usSignal subscribe to signal3, signal4
 since the parent useSignal calls the function every time the subscribed signals change, the child signal will be recreated each time and the subscribers will be re-registered. In this regard, it is worth using this technique as rarely as possible.
 
+signal.subscribers  contain all computed function
 
 ```

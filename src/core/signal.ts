@@ -34,7 +34,6 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
     signalContext.startRecord();
     $value = f();
     const signals = signalContext.endRecord();
-    console.log(signals);
     signals.forEach((signal) => {
       signal.subscribers.add(value as computedFunc<unknown>);
     });
@@ -64,8 +63,8 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
     if (value1 === $value && !($value instanceof Object)) return $value;
     $value = value1;
 
-    func.subscribers.forEach((signal) => {
-      signal();
+    func.subscribers.forEach((watchFun) => {
+      watchFun();
     });
     return $value;
   }) as Signal<T>;
