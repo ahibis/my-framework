@@ -233,7 +233,7 @@ function handleElement(
             if (signal instanceof Function) {
               useSignal(() => {
                 const res = signal();
-                child.setAttribute("value", res);
+                (child as HTMLInputElement).value = res;
               });
               child.addEventListener("input", (event) => {
                 signal((event.target as HTMLInputElement)?.value);
@@ -246,7 +246,7 @@ function handleElement(
             const key = manipulation[1];
             const target = manipulation[0];
             useSignal(() => {
-              child.setAttribute("value", target[key] as string);
+              (child as HTMLInputElement).value = target[key] as string;
             });
             child.addEventListener("input", (event) => {
               target[key] = (event.target as HTMLInputElement)?.value;
