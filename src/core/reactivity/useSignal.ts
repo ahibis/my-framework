@@ -2,10 +2,12 @@ import { debounce } from "../helpers/debounce";
 import { throttle } from "../helpers/throttle";
 import { useAnimationFrame } from "./useAnimationFrame";
 
-type watchFunc<T> = () => T;
+type watchFunc = (() => void) & {
+  deps: Set<Signal<unknown>>;
+};
 type computedFunc<T> = (prevValue: T) => T;
 type Signal<T> = ((value1?: T | computedFunc<T>) => T) & {
-  subscribers: Set<watchFunc<unknown>>;
+  subscribers: Set<watchFunc>;
 };
 type SignalOptions<T> = {
   debounce?: number;
@@ -15,9 +17,9 @@ type SignalOptions<T> = {
 };
 
 class SignalContext {
-  currentWatchFunc?: watchFunc<unknown>;
-  watchFuncStack: watchFunc<unknown>[] = [];
-  startRecord(watchFunc: watchFunc<unknown>) {
+  currentWatchFunc?: watchFunc;
+  watchFuncStack: watchFunc[] = [];
+  startRecord(watchFunc: watchFunc) {
     this.currentWatchFunc = watchFunc;
     this.watchFuncStack.push(watchFunc);
   }
@@ -30,7 +32,23 @@ class SignalContext {
   addRecord(signal: Signal<unknown>) {
     if (this.currentWatchFunc) {
       signal.subscribers.add(this.currentWatchFunc);
+      this.currentWatchFunc.deps.add(signal);
     }
+  }
+  watcherHooksRun = 0;
+  hookWatchers: watchFunc[] = [];
+  addWatcherHook(watchFunc: watchFunc) {
+    this.hookWatchers.push(watchFunc);
+  }
+  startWatchersHook() {
+    this.watcherHooksRun += 1;
+    return this.hookWatchers.length;
+  }
+  endWatchersHook(offset: number) {
+    this.watcherHooksRun -= 1;
+    const watchers = this.hookWatchers.slice(offset, this.hookWatchers.length);
+    if (this.watcherHooksRun == 0) this.hookWatchers = [];
+    return watchers;
   }
 }
 const signalContext = new SignalContext();
@@ -48,10 +66,10 @@ function wrapToConstrains<T>(
   }
   return resFunc;
 }
-function executeWatchers(watchers: Set<watchFunc<unknown>>) {
+function executeWatchers(watchers: Set<watchFunc>) {
   watchers.forEach((watchFunc) => watchFunc());
 }
-function executeWatchersOnAnimationFrame(watchers: Set<watchFunc<unknown>>) {
+function executeWatchersOnAnimationFrame(watchers: Set<watchFunc>) {
   watchers.forEach((watchFunc) => useAnimationFrame(watchFunc));
 }
 
@@ -75,7 +93,9 @@ function useSignal<T>(
     const wrappedFunc = wrapToConstrains(() => {
       $value = f($value);
       execSubscribes(func.subscribers);
-    }, options) as () => {};
+    }, options) as watchFunc;
+    wrappedFunc.deps = new Set();
+    signalContext.addWatcherHook(wrappedFunc);
     if (options?.deps) {
       options.deps.forEach((signal) => {
         signal.subscribers.add(wrappedFunc);

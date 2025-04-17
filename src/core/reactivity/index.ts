@@ -9,3 +9,4 @@ export {
 export { useReactive, getLastManipulation } from "./useReactive";
 export { useReactiveSignal } from "./useReactiveSignal";
 export { useAnimationFrame } from "./useAnimationFrame";
+export { removeWatcher } from "./removeWatcher";

@@ -1,4 +1,4 @@
-import { handleElement } from "../component";
+import { handleElement, unmount } from "../component";
 import { Signal, useSignal } from "../reactivity";
 import { createDirective, evalFunc } from "./createDirective";
 
@@ -38,7 +38,7 @@ const dFor = createDirective("*for", (child, ctx, value) => {
         reactiveValues[i](res[i]);
       }
       for (let i = res.length; i < elements.length; i++) {
-        elements[i].remove();
+        unmount(elements[i]);
         elements.pop();
       }
       const newReactiveValues = res
