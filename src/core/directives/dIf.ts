@@ -1,4 +1,4 @@
-import { Signal, useSignal } from "../signal";
+import { Signal, useSignal } from "../reactivity";
 import { createDirective, evalFunc } from "./createDirective";
 
 let lastIfResult: Signal<boolean> | undefined = undefined;

@@ -1,4 +1,4 @@
-import { Signal, useSignal } from "../signal";
+import { Signal, useSignal } from "../reactivity";
 
 function use<T>(
   value: Promise<T>,

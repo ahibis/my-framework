@@ -1,4 +1,4 @@
-import { useSignal } from "../signal";
+import { useSignal } from "../reactivity";
 
 type fetchParams = Parameters<typeof fetch>;
 

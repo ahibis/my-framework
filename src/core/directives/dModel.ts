@@ -1,4 +1,4 @@
-import { getLastManipulation, Signal, useSignal } from "../signal";
+import { getLastManipulation, Signal, useSignal } from "../reactivity";
 import { createDirective, evalFunc } from "./createDirective";
 
 const dModel = createDirective("*model", (child, ctx, value) => {

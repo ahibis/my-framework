@@ -1,5 +1,5 @@
-import { standardDirectivesMap } from "./directives";
-import { useSignal } from "./signal";
+import { standardDirectivesMap } from "../directives";
+import { useSignal } from "../reactivity";
 function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }

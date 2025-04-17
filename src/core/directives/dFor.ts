@@ -1,5 +1,5 @@
-import { handleElement } from "../createComponent";
-import { Signal, useSignal } from "../signal";
+import { handleElement } from "../component";
+import { Signal, useSignal } from "../reactivity";
 import { createDirective, evalFunc } from "./createDirective";
 
 const dFor = createDirective("*for", (child, ctx, value) => {
