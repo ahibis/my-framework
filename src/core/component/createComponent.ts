@@ -1,5 +1,6 @@
 import { standardDirectivesMap } from "../directives";
 import { useSignal } from "../reactivity";
+import { replaceMount } from "./replaceMount";
 function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
@@ -82,7 +83,7 @@ function handleElement(
         const elementFunc = ctx[child.localName] as (
           params: Record<string, unknown>,
           elements: Record<string, NodeList>
-        ) => HTMLElement;
+        ) => ShadowRoot;
         const childrens = [...child.childNodes];
         const elementsRecord: Record<string, NodeList> = {
           "": child.childNodes,
@@ -111,7 +112,7 @@ function handleElement(
           )
         );
         const element = elementFunc(params, elementsRecord);
-        child.replaceWith(element);
+        replaceMount(element, child);
         continue;
       }
       const attributes = [...child.attributes];
@@ -192,11 +193,13 @@ function createComponent<T extends object>(
     const element = document.createElement("div");
     const shadowRoot = element.attachShadow({ mode: "open" });
     shadowRoot.innerHTML = htmlString;
-    const virtualDOM = shadowRoot;
+    const virtualDOM = shadowRoot as ShadowRoot & { component: string };
     if (virtualDOM) {
       handleElement(virtualDOM, ctx, elements);
     }
     componentStateStack.pop();
+    virtualDOM.component = "component";
+    console.dir(virtualDOM);
     return virtualDOM!;
   };
 }

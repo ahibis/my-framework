@@ -8,36 +8,42 @@ const dIf = createDirective("*if", (child, ctx, value) => {
   let prevState: boolean = true;
   child.removeAttribute("*if");
   lastIfResult = useSignal(() => !!func(ctx));
-  useSignal(() => {
-    const state = !!func(ctx);
-    if (prevState !== state) {
-      if (!state) {
-        child.parentElement?.replaceChild(prevChild, child)!;
-      } else {
-        prevChild.parentElement?.replaceChild(child, prevChild)!;
+  useSignal(
+    () => {
+      const state = !!func(ctx);
+      if (prevState !== state) {
+        if (!state) {
+          child.parentElement?.replaceChild(prevChild, child)!;
+        } else {
+          prevChild.parentElement?.replaceChild(child, prevChild)!;
+        }
+        prevState = state;
       }
-      prevState = state;
-    }
-  });
+    },
+    { onAnimationFrame: true }
+  );
   return;
 });
 const dElse = createDirective("*else", (child) => {
   let prevChild: Node = document.createComment("");
   let prevState: boolean = false;
   child.removeAttribute("*else");
-  useSignal(() => {
-    if (lastIfResult === undefined) return;
-    const state = !lastIfResult();
-    console.log(state);
-    if (prevState !== state) {
-      if (!state) {
-        child.parentElement?.replaceChild(prevChild, child)!;
-      } else {
-        prevChild.parentElement?.replaceChild(child, prevChild)!;
+  useSignal(
+    () => {
+      if (lastIfResult === undefined) return;
+      const state = !lastIfResult();
+      console.log(state);
+      if (prevState !== state) {
+        if (!state) {
+          child.parentElement?.replaceChild(prevChild, child)!;
+        } else {
+          prevChild.parentElement?.replaceChild(child, prevChild)!;
+        }
+        prevState = state;
       }
-      prevState = state;
-    }
-  });
+    },
+    { onAnimationFrame: true }
+  );
   return;
 });
 export { dIf, dElse };

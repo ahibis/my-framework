@@ -5,10 +5,13 @@ const dModel = createDirective("*model", (child, ctx, value) => {
   const func = evalFunc(value);
   const signal = func(ctx) as Signal<string> | string;
   if (signal instanceof Function) {
-    useSignal(() => {
-      const res = signal();
-      (child as HTMLInputElement).value = res;
-    });
+    useSignal(
+      () => {
+        const res = signal();
+        (child as HTMLInputElement).value = res;
+      },
+      { onAnimationFrame: true }
+    );
     child.addEventListener("input", (event) => {
       signal((event.target as HTMLInputElement)?.value);
     });
