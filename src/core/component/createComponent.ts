@@ -11,6 +11,7 @@ console.log(directivesMap);
 
 type NodeWithContext = Node & {
   watchers?: watchFunc[];
+  componentStates?: componentState[];
 };
 
 function handleElement(
@@ -19,6 +20,7 @@ function handleElement(
   providedElements: Record<string, NodeList>
 ) {
   const childrenQueue = [element];
+  const offsetOfComponentState = componentsContext.startHookComponentState();
   const watchers = hookWatchers(() => {
     while (childrenQueue.length > 0) {
       const child = childrenQueue.shift()!;
@@ -179,15 +181,36 @@ function handleElement(
       }
     }
   });
+  const componentStates = componentsContext.stopHookComponentState(
+    offsetOfComponentState
+  );
   element.watchers = watchers;
+  element.componentStates = componentStates;
 }
 
 type componentContext = Record<string, unknown>;
 
 interface componentState {
   onMounted: () => void;
+  onUnmounted: () => void;
 }
-const componentStateStack: componentState[] = [];
+class ComponentsContext {
+  componentStateStack: componentState[] = [];
+  mountedComponentState: componentState[] = [];
+  addMountedComponentState(state: componentState) {
+    this.mountedComponentState.push(state);
+  }
+  startHookComponentState() {
+    return this.mountedComponentState.length;
+  }
+  stopHookComponentState(offset: number) {
+    return this.mountedComponentState.slice(
+      offset,
+      this.mountedComponentState.length
+    );
+  }
+}
+const componentsContext = new ComponentsContext();
 
 type shadowRootWithParams = ShadowRoot & {
   watchers: watchFunc[];
@@ -199,8 +222,11 @@ function createComponent<T extends object>(
   setup: (params: T) => componentContext
 ) {
   return (params: T, elements: Record<string, NodeList>) => {
-    const componentState: componentState = { onMounted: () => {} };
-    componentStateStack.push(componentState);
+    const componentState: componentState = {
+      onMounted: () => {},
+      onUnmounted: () => {},
+    };
+    componentsContext.componentStateStack.push(componentState);
     let ctx: componentContext;
     const watchers = hookWatchers(() => {
       ctx = setup(params);
@@ -214,7 +240,7 @@ function createComponent<T extends object>(
       virtualDOM.watchers.push(...watchers);
       virtualDOM.ctx = componentState;
     }
-    componentStateStack.pop();
+    componentsContext.componentStateStack.pop();
     return virtualDOM!;
   };
 }
@@ -222,7 +248,8 @@ function createComponent<T extends object>(
 export {
   createComponent,
   handleElement,
-  componentStateStack,
+  componentsContext,
   type NodeWithContext,
   type shadowRootWithParams,
+  type componentState,
 };
