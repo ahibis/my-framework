@@ -88,7 +88,7 @@ function handleElement(
           const elementFunc = ctx[child.localName] as (
             params: Record<string, unknown>,
             elements: Record<string, NodeList>
-          ) => ShadowRoot;
+          ) => shadowRootWithParams;
           const childrens = [...child.childNodes];
           const elementsRecord: Record<string, NodeList> = {
             "": child.childNodes,
@@ -189,12 +189,17 @@ interface componentState {
 }
 const componentStateStack: componentState[] = [];
 
+type shadowRootWithParams = ShadowRoot & {
+  watchers: watchFunc[];
+  ctx: componentState;
+};
+
 function createComponent<T extends object>(
   htmlString: string,
   setup: (params: T) => componentContext
 ) {
   return (params: T, elements: Record<string, NodeList>) => {
-    const componentState = { onMounted: () => {} };
+    const componentState: componentState = { onMounted: () => {} };
     componentStateStack.push(componentState);
     let ctx: componentContext;
     const watchers = hookWatchers(() => {
@@ -203,20 +208,21 @@ function createComponent<T extends object>(
     const element = document.createElement("div");
     const shadowRoot = element.attachShadow({ mode: "open" });
     shadowRoot.innerHTML = htmlString;
-    const virtualDOM = shadowRoot as ShadowRoot & {
-      watchers: watchFunc[];
-    };
+    const virtualDOM = shadowRoot as shadowRootWithParams;
     if (virtualDOM) {
       handleElement(virtualDOM, ctx!, elements);
       virtualDOM.watchers.push(...watchers);
+      virtualDOM.ctx = componentState;
     }
     componentStateStack.pop();
-    console.dir(virtualDOM);
     return virtualDOM!;
   };
 }
-function onMounted(func: () => void) {
-  if (componentStateStack.length == 0) throw new Error("no component");
-  componentStateStack[componentStateStack.length - 1].onMounted = func;
-}
-export { createComponent, onMounted, handleElement, type NodeWithContext };
+
+export {
+  createComponent,
+  handleElement,
+  componentStateStack,
+  type NodeWithContext,
+  type shadowRootWithParams,
+};
