@@ -13,15 +13,27 @@ function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
 
+type Directive = {
+  name: string;
+  handleFunc: directiveFunc;
+};
+
 function createDirective(name: string, handleFunc: directiveFunc) {
-  return {
+  const directive = {
     name,
     handleFunc,
   };
+  return directive;
 }
-
-function getDirectivesMap(directives: ReturnType<typeof createDirective>[]) {
+function getDirectivesMap(directives: Directive[]) {
   return new Map(directives.map((directive) => [directive.name, directive]));
 }
 
-export { createDirective, evalFunc, getDirectivesMap };
+export { dBind } from "./dBind";
+export {
+  createDirective,
+  evalFunc,
+  getDirectivesMap,
+  type directiveFunc,
+  type Directive,
+};
