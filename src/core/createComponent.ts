@@ -1,7 +1,29 @@
+import { getDirectivesMap } from "./directives/createDirective";
+import { dBind } from "./directives/dBind";
+import { dClass } from "./directives/dClass";
+import { dFor } from "./directives/dFor";
+import { dHtml } from "./directives/dHtml";
+import { dElse, dIf } from "./directives/dIf";
+import { dModel } from "./directives/dModel";
+import { dRef } from "./directives/dRef";
+import { dStyle } from "./directives/dStyle";
 import { getLastManipulation, Signal, useSignal } from "./signal";
 function evalFunc(code: string) {
   return new Function("ctx", `with(ctx){return ${code}}`);
 }
+
+const directives = [
+  dRef,
+  dBind,
+  dHtml,
+  dStyle,
+  dClass,
+  dModel,
+  dFor,
+  dIf,
+  dElse,
+];
+const directivesMap = getDirectivesMap(directives);
 
 function handleElement(
   element: Node,
@@ -10,7 +32,6 @@ function handleElement(
 ) {
   const childrenQueue = [element];
 
-  let lastIfResult: Signal<boolean> | undefined = undefined;
   while (childrenQueue.length > 0) {
     const child = childrenQueue.shift()!;
 
@@ -119,140 +140,153 @@ function handleElement(
         const name = attribute.name;
         const key = name.substring(1, name.length);
         const value = attribute.value;
+
         const func = evalFunc(value);
+
+        if (directivesMap.has(name)) {
+          const directive = directivesMap.get(name)!;
+          const res = directive.handleFunc(child, ctx, value);
+          if (res) {
+            if (res.stopHandleChildren) {
+              handleChilds = false;
+            }
+            if (res.stopHandleAttributes) {
+              break;
+            }
+          }
+          continue;
+        }
         // служебные директивы
         if (name.startsWith("*")) {
-          if (name === "*for") {
-            handleChilds = false;
-            const [valueWithKey, code] = value.split(" in ");
-            const [valueKey, indexKeyRaw] = valueWithKey.split(",");
-            const indexKey = indexKeyRaw?.trim() || "index";
-            const func = evalFunc(code);
-            let isInit = true;
-            let elements: HTMLElement[] = [];
-            let reactiveValues: Signal<string>[] = [];
-            child.removeAttribute(name);
-            const prevChild = child.cloneNode(true) as HTMLElement;
-            useSignal(() => {
-              const res = func(ctx) as string[];
-              if (isInit) {
-                reactiveValues = res.map((item) => useSignal(item));
-                elements = res.map((item, i) => {
-                  const element = child.cloneNode(true) as HTMLElement;
-                  handleElement(
-                    element,
-                    {
-                      ...ctx,
-                      [valueKey.trim()]: reactiveValues[i],
-                      [indexKey.trim()]: i,
-                    },
-                    {}
-                  );
-                  return element;
-                });
-                child.replaceWith(...elements);
-                isInit = false;
-                return;
-              }
-              for (let i = 0; i < Math.min(res.length, elements.length); i++) {
-                reactiveValues[i](res[i]);
-              }
-              for (let i = res.length; i < elements.length; i++) {
-                elements[i].remove();
-                elements.pop();
-              }
-              const newReactiveValues = res
-                .slice(elements.length)
-                .map((item) => useSignal(item));
-              if (reactiveValues.length > 0) {
-                reactiveValues.push(...newReactiveValues);
-              }
-              const newElements = res.slice(elements.length).map((item, i) => {
-                const element = prevChild.cloneNode(true) as HTMLElement;
-                const index = elements.length + i;
-                handleElement(
-                  element,
-                  {
-                    ...ctx,
-                    [valueKey.trim()]: reactiveValues[index],
-                    [indexKey.trim()]: index,
-                  },
-                  {}
-                );
-                return element;
-              });
-              if (newElements.length > 0) {
-                elements.at(-1)?.after(...newElements);
-                elements.push(...newElements);
-              }
-            });
-            break;
-          }
-
-          if (name === "*if") {
-            let prevChild: Node = document.createComment("");
-            let prevState: boolean = true;
-            child.removeAttribute(name);
-            lastIfResult = useSignal(() => !!func(ctx));
-            useSignal(() => {
-              const state = !!func(ctx);
-              if (prevState !== state) {
-                if (!state) {
-                  child.parentElement?.replaceChild(prevChild, child)!;
-                } else {
-                  prevChild.parentElement?.replaceChild(child, prevChild)!;
-                }
-                prevState = state;
-              }
-            });
-
-            continue;
-          }
-          if (name === "*else") {
-            let prevChild: Node = document.createComment("");
-            let prevState: boolean = false;
-            child.removeAttribute(name);
-            useSignal(() => {
-              if (lastIfResult === undefined) return;
-              const state = !lastIfResult();
-              console.log(state);
-              if (prevState !== state) {
-                if (!state) {
-                  child.parentElement?.replaceChild(prevChild, child)!;
-                } else {
-                  prevChild.parentElement?.replaceChild(child, prevChild)!;
-                }
-                prevState = state;
-              }
-            });
-            continue;
-          }
-          if (name === "*model") {
-            const signal = func(ctx) as Signal<string> | string;
-            if (signal instanceof Function) {
-              useSignal(() => {
-                const res = signal();
-                (child as HTMLInputElement).value = res;
-              });
-              child.addEventListener("input", (event) => {
-                signal((event.target as HTMLInputElement)?.value);
-              });
-              child.removeAttribute(name);
-              continue;
-            }
-            const manipulation = getLastManipulation();
-            if (!manipulation) continue;
-            const key = manipulation[1];
-            const target = manipulation[0];
-            useSignal(() => {
-              (child as HTMLInputElement).value = target[key] as string;
-            });
-            child.addEventListener("input", (event) => {
-              target[key] = (event.target as HTMLInputElement)?.value;
-            });
-            child.removeAttribute(name);
-            continue;
-          }
+          // if (name === "*for") {
+          //   handleChilds = false;
+          //   const [valueWithKey, code] = value.split(" in ");
+          //   const [valueKey, indexKeyRaw] = valueWithKey.split(",");
+          //   const indexKey = indexKeyRaw?.trim() || "index";
+          //   const func = evalFunc(code);
+          //   let isInit = true;
+          //   let elements: HTMLElement[] = [];
+          //   let reactiveValues: Signal<string>[] = [];
+          //   child.removeAttribute(name);
+          //   const prevChild = child.cloneNode(true) as HTMLElement;
+          //   useSignal(() => {
+          //     const res = func(ctx) as string[];
+          //     if (isInit) {
+          //       reactiveValues = res.map((item) => useSignal(item));
+          //       elements = res.map((item, i) => {
+          //         const element = child.cloneNode(true) as HTMLElement;
+          //         handleElement(
+          //           element,
+          //           {
+          //             ...ctx,
+          //             [valueKey.trim()]: reactiveValues[i],
+          //             [indexKey.trim()]: i,
+          //           },
+          //           {}
+          //         );
+          //         return element;
+          //       });
+          //       child.replaceWith(...elements);
+          //       isInit = false;
+          //       return;
+          //     }
+          //     for (let i = 0; i < Math.min(res.length, elements.length); i++) {
+          //       reactiveValues[i](res[i]);
+          //     }
+          //     for (let i = res.length; i < elements.length; i++) {
+          //       elements[i].remove();
+          //       elements.pop();
+          //     }
+          //     const newReactiveValues = res
+          //       .slice(elements.length)
+          //       .map((item) => useSignal(item));
+          //     if (reactiveValues.length > 0) {
+          //       reactiveValues.push(...newReactiveValues);
+          //     }
+          //     const newElements = res.slice(elements.length).map((item, i) => {
+          //       const element = prevChild.cloneNode(true) as HTMLElement;
+          //       const index = elements.length + i;
+          //       handleElement(
+          //         element,
+          //         {
+          //           ...ctx,
+          //           [valueKey.trim()]: reactiveValues[index],
+          //           [indexKey.trim()]: index,
+          //         },
+          //         {}
+          //       );
+          //       return element;
+          //     });
+          //     if (newElements.length > 0) {
+          //       elements.at(-1)?.after(...newElements);
+          //       elements.push(...newElements);
+          //     }
+          //   });
+          //   break;
+          // }
+          // if (name === "*if") {
+          //   let prevChild: Node = document.createComment("");
+          //   let prevState: boolean = true;
+          //   child.removeAttribute(name);
+          //   lastIfResult = useSignal(() => !!func(ctx));
+          //   useSignal(() => {
+          //     const state = !!func(ctx);
+          //     if (prevState !== state) {
+          //       if (!state) {
+          //         child.parentElement?.replaceChild(prevChild, child)!;
+          //       } else {
+          //         prevChild.parentElement?.replaceChild(child, prevChild)!;
+          //       }
+          //       prevState = state;
+          //     }
+          //   });
+          //   continue;
+          // }
+          // if (name === "*else") {
+          //   let prevChild: Node = document.createComment("");
+          //   let prevState: boolean = false;
+          //   child.removeAttribute(name);
+          //   useSignal(() => {
+          //     if (lastIfResult === undefined) return;
+          //     const state = !lastIfResult();
+          //     console.log(state);
+          //     if (prevState !== state) {
+          //       if (!state) {
+          //         child.parentElement?.replaceChild(prevChild, child)!;
+          //       } else {
+          //         prevChild.parentElement?.replaceChild(child, prevChild)!;
+          //       }
+          //       prevState = state;
+          //     }
+          //   });
+          //   continue;
+          // }
+          // if (name === "*model") {
+          //   const signal = func(ctx) as Signal<string> | string;
+          //   if (signal instanceof Function) {
+          //     useSignal(() => {
+          //       const res = signal();
+          //       (child as HTMLInputElement).value = res;
+          //     });
+          //     child.addEventListener("input", (event) => {
+          //       signal((event.target as HTMLInputElement)?.value);
+          //     });
+          //     child.removeAttribute(name);
+          //     continue;
+          //   }
+          //   const manipulation = getLastManipulation();
+          //   if (!manipulation) continue;
+          //   const key = manipulation[1];
+          //   const target = manipulation[0];
+          //   useSignal(() => {
+          //     (child as HTMLInputElement).value = target[key] as string;
+          //   });
+          //   child.addEventListener("input", (event) => {
+          //     target[key] = (event.target as HTMLInputElement)?.value;
+          //   });
+          //   child.removeAttribute(name);
+          //   continue;
+          // }
         }
         // обработка событий
         if (name.startsWith("@")) {
@@ -271,69 +305,69 @@ function handleElement(
         }
         // обработка атрибутов
         if (name.startsWith(":")) {
-          if (name === ":style") {
-            useSignal(() => {
-              const res = func(ctx);
-              if (res instanceof Object) {
-                child.setAttribute(
-                  key,
-                  Object.entries(res)
-                    .map(([key, value]) => `${key}:${value};`)
-                    .join("")
-                );
-                return;
-              }
-              child.setAttribute(key, res);
-            });
-            child.removeAttribute(name);
-            continue;
-          }
-          if (name === ":class") {
-            useSignal(() => {
-              const res = func(ctx);
-              if (res instanceof Array) {
-                child.setAttribute(key, res.join(" "));
-                return;
-              }
-              if (res instanceof Object) {
-                child.setAttribute(
-                  key,
-                  Object.entries(res)
-                    .filter(([key, value]) => value)
-                    .map(([key]) => key)
-                    .join(" ")
-                );
-                return;
-              }
-              child.setAttribute(key, res);
-            });
-            child.removeAttribute(name);
-            continue;
-          }
-          if (name === ":bind") {
-            useSignal(() => {
-              const res = func(ctx) as Record<string, string>;
-              Object.entries(res).forEach(([key, value]) => {
-                child.setAttribute(key, value);
-              });
-            });
-            child.removeAttribute(name);
-            continue;
-          }
-          if (name === ":ref") {
-            const res = func(ctx) as (element: HTMLElement) => void;
-            res(child);
+          // if (name === ":style") {
+          //   useSignal(() => {
+          //     const res = func(ctx);
+          //     if (res instanceof Object) {
+          //       child.setAttribute(
+          //         key,
+          //         Object.entries(res)
+          //           .map(([key, value]) => `${key}:${value};`)
+          //           .join("")
+          //       );
+          //       return;
+          //     }
+          //     child.setAttribute(key, res);
+          //   });
+          //   child.removeAttribute(name);
+          //   continue;
+          // }
+          // if (name === ":class") {
+          //   useSignal(() => {
+          //     const res = func(ctx);
+          //     if (res instanceof Array) {
+          //       child.setAttribute(key, res.join(" "));
+          //       return;
+          //     }
+          //     if (res instanceof Object) {
+          //       child.setAttribute(
+          //         key,
+          //         Object.entries(res)
+          //           .filter(([key, value]) => value)
+          //           .map(([key]) => key)
+          //           .join(" ")
+          //       );
+          //       return;
+          //     }
+          //     child.setAttribute(key, res);
+          //   });
+          //   child.removeAttribute(name);
+          //   continue;
+          // }
+          // if (name === ":bind") {
+          //   useSignal(() => {
+          //     const res = func(ctx) as Record<string, string>;
+          //     Object.entries(res).forEach(([key, value]) => {
+          //       child.setAttribute(key, value);
+          //     });
+          //   });
+          //   child.removeAttribute(name);
+          //   continue;
+          // }
+          // if (name === ":ref") {
+          //   const res = func(ctx) as (element: HTMLElement) => void;
+          //   res(child);
 
-            child.removeAttribute(name);
-            continue;
-          }
-          if (name === ":html") {
-            useSignal(() => {
-              const res = func(ctx) as string;
-              (child as HTMLElement).innerHTML = res;
-            });
-            continue;
-          }
+          //   child.removeAttribute(name);
+          //   continue;
+          // }
+          // if (name === ":html") {
+          //   useSignal(() => {
+          //     const res = func(ctx) as string;
+          //     (child as HTMLElement).innerHTML = res;
+          //   });
+          //   continue;
+          // }
 
           useSignal(() => {
             const res = func(ctx);
@@ -384,4 +418,4 @@ function onMounted(func: () => void) {
   if (componentStateStack.length == 0) throw new Error("no component");
   componentStateStack[componentStateStack.length - 1].onMounted = func;
 }
-export { createComponent, onMounted };
+export { createComponent, onMounted, handleElement };

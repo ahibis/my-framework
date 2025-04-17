@@ -1,5 +1,10 @@
 type watchFunc<T> = () => T;
 type computedFunc<T> = (prevValue: T) => T;
+type SignalOptions<T> = {
+  debounce?: number;
+  throttle?: number;
+  watchSignals?: Signal<T>[];
+};
 
 class SignalContext {
   currentWatchFunc?: watchFunc<unknown>;
@@ -41,11 +46,14 @@ class SignalContext {
 }
 const signalContext = new SignalContext();
 
-function throttle<T extends () => void>(func: T, delay: number): () => void {
+function throttle<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): T {
   let lastCallTime = 0;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  return function () {
+  return function (...args: Parameters<T>) {
     const now = Date.now();
     const timeSinceLastCall = now - lastCallTime;
     const remainingDelay = delay - timeSinceLastCall;
@@ -56,23 +64,55 @@ function throttle<T extends () => void>(func: T, delay: number): () => void {
     }
 
     if (timeSinceLastCall >= delay) {
-      func();
+      func(...args);
       lastCallTime = now;
     } else {
       timeoutId = setTimeout(() => {
-        func();
+        func(...args);
         lastCallTime = Date.now();
         timeoutId = null;
       }, remainingDelay);
     }
-  };
+  } as T;
+}
+
+function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return function (...args: Parameters<T>) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+    }, delay);
+  } as T;
 }
 
 type Signal<T> = ((value1?: T | computedFunc<T>) => T) & {
   subscribers: Set<watchFunc<unknown>>;
 };
+function wrapToConstrains<T>(
+  func: (value1: T | computedFunc<T>) => void,
+  options?: SignalOptions<T>
+) {
+  let resFunc = func;
+  if (options?.debounce) {
+    resFunc = debounce(resFunc, options.debounce);
+  }
+  if (options?.throttle) {
+    resFunc = throttle(resFunc, options.throttle);
+  }
+  return resFunc;
+}
 
-function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
+function useSignal<T>(
+  value: T | computedFunc<T>,
+  options?: SignalOptions<T>
+): Signal<T> {
   if (typeof value === "function") {
     let $value: T;
     const func = (() => {
@@ -82,10 +122,18 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
     func.subscribers = new Set();
 
     const f = value as computedFunc<T>;
-    signalContext.startRecord(() => {
+    const wrappedFunc = wrapToConstrains(() => {
       $value = f($value);
       signalContext.executeWatchers(func.subscribers);
-    });
+    }, options) as () => {};
+    if (options?.watchSignals) {
+      options.watchSignals.forEach((signal) => {
+        signal.subscribers.add(wrappedFunc);
+      });
+      $value = f($value!);
+      return func;
+    }
+    signalContext.startRecord(wrappedFunc);
     $value = f($value!);
     signalContext.endRecord();
 
@@ -93,23 +141,28 @@ function useSignal<T>(value: T | computedFunc<T>): Signal<T> {
   }
   let $value: T;
   $value = value;
-  const func = ((value1?: T | computedFunc<T>) => {
-    if (value1 == undefined) {
-      signalContext.addRecord(func as Signal<unknown>);
-      return $value;
-    }
+
+  const wrappedFunc = wrapToConstrains((value1: T | computedFunc<T>) => {
     if (typeof value1 === "function") {
       const f = value1 as computedFunc<T>;
       const newValue = f($value);
       if (newValue === $value && !($value instanceof Object)) return $value;
       $value = newValue;
       signalContext.executeWatchers(func.subscribers);
-      return newValue;
+      return;
     }
     if (value1 === $value && !($value instanceof Object)) return $value;
     $value = value1;
 
     signalContext.executeWatchers(func.subscribers);
+  }, options);
+
+  const func = ((value1?: T | computedFunc<T>) => {
+    if (value1 == undefined) {
+      signalContext.addRecord(func as Signal<unknown>);
+      return $value;
+    }
+    wrappedFunc(value1);
     return $value;
   }) as Signal<T>;
   func.subscribers = new Set();
