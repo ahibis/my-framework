@@ -4,3 +4,6 @@ export * from "./unmount";
 export * from "./onMounted";
 export * from "./onUnmounted";
 export * from "./replaceMount";
+export * from "./componentsContext";
+export * from "./createComponent";
+export * from "./hydrateElement";

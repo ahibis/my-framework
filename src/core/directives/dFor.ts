@@ -1,4 +1,4 @@
-import { handleElement, unmount } from "../component";
+import { hydrateElement, unmount } from "../component";
 import { Signal, useSignal } from "../reactivity";
 import { createDirective, evalFunc } from "./createDirective";
 
@@ -19,7 +19,7 @@ const dFor = createDirective("*for", (child, ctx, value) => {
         reactiveValues = res.map((item) => useSignal(item));
         elements = res.map((item, i) => {
           const element = child.cloneNode(true) as HTMLElement;
-          handleElement(
+          hydrateElement(
             element,
             {
               ...ctx,
@@ -50,7 +50,7 @@ const dFor = createDirective("*for", (child, ctx, value) => {
       const newElements = res.slice(elements.length).map((item, i) => {
         const element = prevChild.cloneNode(true) as HTMLElement;
         const index = elements.length + i;
-        handleElement(
+        hydrateElement(
           element,
           {
             ...ctx,

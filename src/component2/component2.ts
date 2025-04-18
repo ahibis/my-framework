@@ -1,5 +1,5 @@
-import { createComponent, onMounted, useReactive } from "../core";
-import { onUnmounted } from "../core/component/onUnmounted";
+import { createComponent, onMounted, useReactive, onUnmounted } from "../core";
+
 import html from "./component2.html?raw";
 
 export default createComponent<{ test: string }>(html, ({ test }) => {
