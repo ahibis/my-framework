@@ -7,7 +7,6 @@ function evalFunc(code: string) {
 }
 
 const directivesMap = standardDirectivesMap;
-console.log(directivesMap);
 
 type NodeWithContext = Node & {
   watchers?: watchFunc[];
@@ -41,9 +40,12 @@ function handleElement(
           }
           const code = part.substring(1, part.length - 1);
           const func = evalFunc(code);
-          useSignal(() => {
-            child.nodeValue = func(ctx);
-          });
+          useSignal(
+            () => {
+              child.nodeValue = func(ctx);
+            },
+            { onAnimationFrame: true }
+          );
           continue;
         }
         const elements = parts.map((part) => {
@@ -51,9 +53,12 @@ function handleElement(
             const code = part.substring(1, part.length - 1);
             const func = evalFunc(code);
             const textEl = new Text();
-            useSignal(() => {
-              textEl.nodeValue = func(ctx);
-            });
+            useSignal(
+              () => {
+                textEl.nodeValue = func(ctx);
+              },
+              { onAnimationFrame: true }
+            );
             return textEl;
           }
           return part;
@@ -163,11 +168,14 @@ function handleElement(
           }
           // обработка атрибутов
           if (name.startsWith(":")) {
-            useSignal(() => {
-              const res = func(ctx);
+            useSignal(
+              () => {
+                const res = func(ctx);
 
-              child.setAttribute(key, res);
-            });
+                child.setAttribute(key, res);
+              },
+              { onAnimationFrame: true }
+            );
             child.removeAttribute(attribute.name);
           }
         }
@@ -196,6 +204,11 @@ interface componentState {
 }
 class ComponentsContext {
   componentStateStack: componentState[] = [];
+  getCurrentComponentState() {
+    if (this.componentStateStack.length == 0) throw new Error("no component");
+    return this.componentStateStack[this.componentStateStack.length - 1];
+  }
+
   mountedComponentState: componentState[] = [];
   addMountedComponentState(state: componentState) {
     this.mountedComponentState.push(state);
@@ -221,6 +234,10 @@ function createComponent<T extends object>(
   htmlString: string,
   setup: (params: T) => componentContext
 ) {
+  const element = document.createElement("div");
+  const shadowRootParent = element.attachShadow({ mode: "open" });
+  shadowRootParent.innerHTML = htmlString;
+
   return (params: T, elements: Record<string, NodeList>) => {
     const componentState: componentState = {
       onMounted: () => {},
@@ -231,10 +248,9 @@ function createComponent<T extends object>(
     const watchers = hookWatchers(() => {
       ctx = setup(params);
     });
-    const element = document.createElement("div");
-    const shadowRoot = element.attachShadow({ mode: "open" });
-    shadowRoot.innerHTML = htmlString;
-    const virtualDOM = shadowRoot as shadowRootWithParams;
+    const virtualDOM = shadowRootParent.childNodes[0].cloneNode(
+      true
+    ) as shadowRootWithParams;
     if (virtualDOM) {
       handleElement(virtualDOM, ctx!, elements);
       virtualDOM.watchers.push(...watchers);
