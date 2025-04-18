@@ -1,7 +1,7 @@
 import { componentsContext } from "./componentsContext";
-import { ShadowRootWithParams } from "./hydrateElement";
+import { HtmlElementWithParams } from "./hydrateElement";
 
-function replaceMount(element: ShadowRootWithParams, toElement: HTMLElement) {
+function replaceMount(element: HtmlElementWithParams, toElement: HTMLElement) {
   toElement.replaceWith(element);
   element.ctx.onMounted.forEach((func) => func());
   componentsContext.addMountedComponentState(element.ctx);

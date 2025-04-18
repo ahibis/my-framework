@@ -1,7 +1,7 @@
 import { componentsContext } from "./componentsContext";
-import { ShadowRootWithParams } from "./hydrateElement";
+import { HtmlElementWithParams } from "./hydrateElement";
 
-function mount(element: ShadowRootWithParams, toElement: HTMLElement) {
+function mount(element: HtmlElementWithParams, toElement: HTMLElement) {
   toElement.appendChild(element);
   element.ctx.onMounted.forEach((func) => func());
   componentsContext.addMountedComponentState(element.ctx);

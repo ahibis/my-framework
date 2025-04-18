@@ -15,7 +15,7 @@ type NodeWithContext = Node & {
   watchers?: watchFunc[];
   componentStates?: ComponentState[];
 };
-type ShadowRootWithParams = ShadowRoot & {
+type HtmlElementWithParams = HTMLElement & {
   watchers: watchFunc[];
   ctx: ComponentState;
 };
@@ -102,7 +102,7 @@ function hydrateElement(
           const elementFunc = ctx[child.localName] as (
             params: Record<string, unknown>,
             elements: Record<string, NodeList>
-          ) => ShadowRootWithParams;
+          ) => HtmlElementWithParams;
           const childrens = [...child.childNodes];
           const elementsRecord: Record<string, NodeList> = {
             "": child.childNodes,
@@ -206,6 +206,6 @@ export {
   hydrateElement,
   evalFunc,
   type NodeWithContext,
-  type ShadowRootWithParams,
+  type HtmlElementWithParams,
   type ComponentParams,
 };

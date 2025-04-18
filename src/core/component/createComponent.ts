@@ -3,7 +3,7 @@ import { componentsContext, ComponentState } from "./componentsContext";
 import {
   ComponentParams,
   hydrateElement,
-  ShadowRootWithParams,
+  HtmlElementWithParams,
 } from "./hydrateElement";
 
 function createComponent<T extends object>(
@@ -23,7 +23,7 @@ function createComponent<T extends object>(
     });
     const virtualDOM = shadowRootParent.childNodes[0].cloneNode(
       true
-    ) as ShadowRootWithParams;
+    ) as HtmlElementWithParams;
     if (virtualDOM) {
       hydrateElement(virtualDOM, ctx!, elements);
       virtualDOM.watchers.push(...watchers);
