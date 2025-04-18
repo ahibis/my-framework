@@ -1,3 +1,4 @@
+import { useSignal } from "../reactivity";
 import { hookWatchers } from "../reactivity/hookWatchers";
 import { componentsContext, ComponentState } from "./componentsContext";
 import {
@@ -19,7 +20,12 @@ function createComponent<T extends object>(
     componentsContext.componentStateStack.push(componentState);
     let ctx: ComponentParams;
     const watchers = hookWatchers(() => {
-      ctx = setup(params);
+      useSignal(
+        () => {
+          ctx = setup(params);
+        },
+        { deps: [] }
+      );
     });
     const virtualDOM = shadowRootParent.childNodes[0].cloneNode(
       true

@@ -12,7 +12,7 @@ type Signal<T> = ((value1?: T | computedFunc<T>) => T) & {
 type SignalOptions<T> = {
   debounce?: number;
   throttle?: number;
-  deps?: Signal<T>[];
+  deps?: Signal<any>[];
   onAnimationFrame?: boolean;
 };
 
@@ -28,8 +28,9 @@ class SignalContext {
     this.currentWatchFunc =
       this.watchFuncStack[this.watchFuncStack.length - 1]!;
   }
-
+  lastCalledSignal: Signal<unknown> | undefined;
   addRecord(signal: Signal<unknown>) {
+    this.lastCalledSignal = signal;
     if (this.currentWatchFunc) {
       signal.subscribers.add(this.currentWatchFunc);
       this.currentWatchFunc.deps.add(signal);
@@ -97,10 +98,15 @@ function useSignal<T>(
     wrappedFunc.deps = new Set();
     signalContext.addWatcherHook(wrappedFunc);
     if (options?.deps) {
+      const fakeWatcher: watchFunc = () => {};
+      fakeWatcher.deps = new Set();
+      signalContext.startRecord(fakeWatcher);
+      $value = f($value!);
+      signalContext.endRecord();
       options.deps.forEach((signal) => {
         signal.subscribers.add(wrappedFunc);
       });
-      $value = f($value!);
+
       return func;
     }
     signalContext.startRecord(wrappedFunc);

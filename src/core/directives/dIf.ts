@@ -33,7 +33,6 @@ const dElse = createDirective("*else", (child) => {
     () => {
       if (lastIfResult === undefined) return;
       const state = !lastIfResult();
-      console.log(state);
       if (prevState !== state) {
         if (!state) {
           child.parentElement?.replaceChild(prevChild, child)!;

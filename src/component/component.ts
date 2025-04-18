@@ -1,5 +1,5 @@
 import component2 from "../component2/component2";
-import { createComponent, useSignal, onMounted } from "../core";
+import { createComponent, useSignal, onMounted, useReactive } from "../core";
 import text from "./component.html?raw";
 
 const myComponent = createComponent(text, () => {
@@ -21,6 +21,16 @@ const myComponent = createComponent(text, () => {
   onMounted(() => {
     console.log("отрисовался");
   });
+
+  const arr = useReactive([1, 2, 3]);
+  useSignal(() => {
+    console.log(arr);
+    console.log(arr.length);
+    console.log("эм");
+  });
+  arr.push(4);
+  arr.push(4);
+
   return {
     name,
     fullName,

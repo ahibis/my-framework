@@ -4,12 +4,20 @@ import {
   useReactive,
   onUnmounted,
   onHydrated,
+  toSignal,
+  useSignal,
 } from "../core";
 
 import html from "./component2.html?raw";
 
 export default createComponent<{ test: string }>(html, ({ test }) => {
-  const obj = useReactive({ test: "test", test1: "test1" });
+  const obj = useReactive({
+    test: "test",
+    test1: "test1",
+    test2: {
+      test3: "test3",
+    },
+  });
 
   onMounted(() => {
     console.log("отрисовался элемент 2");
