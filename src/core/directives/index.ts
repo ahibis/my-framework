@@ -6,6 +6,7 @@ import { dElse, dIf } from "./dIf";
 import { dModel } from "./dModel";
 import { dRef } from "./dRef";
 import { dStyle } from "./dStyle";
+import { dNoHydrate } from "./dNohydrate";
 
 const standardDirectives: Directive[] = [
   dBind,
@@ -17,6 +18,7 @@ const standardDirectives: Directive[] = [
   dHtml,
   dElse,
   dStyle,
+  dNoHydrate,
 ];
 const standardDirectivesMap = getDirectivesMap(standardDirectives);
 
@@ -32,4 +34,5 @@ export {
   dHtml,
   dElse,
   dStyle,
+  dNoHydrate,
 };
