@@ -1,4 +1,4 @@
-import { componentsContext } from "./createComponent";
+import { componentsContext } from "./componentsContext";
 
 function onUnmounted(func: () => void) {
   componentsContext.getCurrentComponentState().onUnmounted = func;
