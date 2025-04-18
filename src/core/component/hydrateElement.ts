@@ -2,6 +2,7 @@ import { standardDirectivesMap } from "../directives";
 import { useSignal, watchFunc } from "../reactivity";
 import { hookWatchers } from "../reactivity";
 import { componentsContext, ComponentState } from "./componentsContext";
+import { onAnimationFrame } from "./onAnimationFrame";
 import { replaceMount } from "./replaceMount";
 
 function evalFunc(code: string) {
@@ -30,7 +31,7 @@ function hydrateElement(
   const watchers = hookWatchers(() => {
     while (childrenQueue.length > 0) {
       const child = childrenQueue.shift()!;
-
+      // отрисовка {}
       if (child instanceof Text) {
         const data = child.nodeValue;
         if (data == null) continue;
@@ -76,16 +77,23 @@ function hydrateElement(
       }
 
       if (child instanceof HTMLElement) {
+        // отрисовка <slot/>
         if (child.localName === "slot") {
           const slotName = child.getAttribute("name");
           if (slotName == null) {
-            child.replaceWith(...providedElements[""]);
+            onAnimationFrame(() => {
+              child.replaceWith(...providedElements[""]);
+            });
+
             continue;
           }
           if (slotName in providedElements) {
-            child.replaceWith(...providedElements[slotName]);
+            onAnimationFrame(() => {
+              child.replaceWith(...providedElements[slotName]);
+            });
           }
         }
+        // отрисовка компонентов
         if (
           child.localName in ctx &&
           typeof ctx[child.localName] === "function"
@@ -131,12 +139,15 @@ function hydrateElement(
             )
           );
           const element = elementFunc(params, elementsRecord);
-          replaceMount(element, child);
+          onAnimationFrame(() => {
+            replaceMount(element, child);
+          });
           continue;
         }
         const attributes = [...child.attributes];
         let handleChilds = true;
 
+        // обработка кастомных атрибутов
         for (let i = 0; i < attributes.length; i++) {
           const attribute = attributes[i];
           const name = attribute.name;

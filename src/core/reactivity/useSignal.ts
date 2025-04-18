@@ -1,6 +1,6 @@
+import { onAnimationFrame } from "../component";
 import { debounce } from "../helpers/debounce";
 import { throttle } from "../helpers/throttle";
-import { useAnimationFrame } from "./useAnimationFrame";
 
 type watchFunc = (() => void) & {
   deps: Set<Signal<unknown>>;
@@ -70,7 +70,7 @@ function executeWatchers(watchers: Set<watchFunc>) {
   watchers.forEach((watchFunc) => watchFunc());
 }
 function executeWatchersOnAnimationFrame(watchers: Set<watchFunc>) {
-  watchers.forEach((watchFunc) => useAnimationFrame(watchFunc));
+  watchers.forEach((watchFunc) => onAnimationFrame(watchFunc));
 }
 
 function useSignal<T>(

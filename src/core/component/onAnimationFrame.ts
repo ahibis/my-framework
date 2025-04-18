@@ -1,5 +1,9 @@
 type watchFunc = () => void;
 class AnimationFrameLoop {
+  domUpdateResolvers: (() => void)[] = [];
+  addDomUpdatePromise(promise: () => void) {
+    this.domUpdateResolvers.push(promise);
+  }
   funcsToExecute: Set<watchFunc> = new Set();
   addRecord(func: watchFunc) {
     this.funcsToExecute.add(func);
@@ -15,6 +19,8 @@ class AnimationFrameLoop {
       }
       this.funcsToExecute.forEach((watcher) => watcher());
       this.funcsToExecute.clear();
+      this.domUpdateResolvers.forEach((resolver) => resolver());
+      this.domUpdateResolvers = [];
       this.executeLoop();
     });
   }
@@ -24,8 +30,13 @@ class AnimationFrameLoop {
 }
 const animationFrameLoop = new AnimationFrameLoop();
 
-function useAnimationFrame(callback: watchFunc) {
+function onAnimationFrame(callback: watchFunc) {
   animationFrameLoop.addRecord(callback);
 }
+function awaitDOMUpdate() {
+  return new Promise<void>((resolve) =>
+    animationFrameLoop.addDomUpdatePromise(resolve)
+  );
+}
 
-export { useAnimationFrame };
+export { onAnimationFrame, awaitDOMUpdate };
