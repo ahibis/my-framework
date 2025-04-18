@@ -1,4 +1,4 @@
-import { removeWatcher, watchFunc } from "../reactivity";
+import { removeWatcher, useAnimationFrame, watchFunc } from "../reactivity";
 import { ComponentState } from "./componentsContext";
 
 type HTMLElementWithContext = HTMLElement & {
@@ -13,6 +13,8 @@ function unmount(element: HTMLElementWithContext) {
     element.componentStates.forEach((componentState) =>
       componentState.onUnmounted.forEach((func) => func())
     );
-  element.remove();
+  useAnimationFrame(() => {
+    element.remove();
+  });
 }
 export { unmount };

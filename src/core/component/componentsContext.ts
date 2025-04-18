@@ -1,6 +1,9 @@
+import { HtmlElementWithParams } from "./hydrateElement";
+
 class ComponentState {
   onMounted: (() => void)[] = [];
   onUnmounted: (() => void)[] = [];
+  onHydrate: ((element: HtmlElementWithParams) => void)[] = [];
 }
 
 class ComponentsContext {

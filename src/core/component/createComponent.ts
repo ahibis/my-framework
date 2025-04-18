@@ -28,6 +28,7 @@ function createComponent<T extends object>(
       hydrateElement(virtualDOM, ctx!, elements);
       virtualDOM.watchers.push(...watchers);
       virtualDOM.ctx = componentState;
+      componentState.onHydrate.forEach((func) => func(virtualDOM));
     }
     componentsContext.componentStateStack.pop();
     return virtualDOM!;

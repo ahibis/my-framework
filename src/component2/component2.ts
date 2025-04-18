@@ -1,4 +1,10 @@
-import { createComponent, onMounted, useReactive, onUnmounted } from "../core";
+import {
+  createComponent,
+  onMounted,
+  useReactive,
+  onUnmounted,
+  onHydrated,
+} from "../core";
 
 import html from "./component2.html?raw";
 
