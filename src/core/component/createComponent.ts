@@ -15,10 +15,7 @@ function createComponent<T extends object>(
   shadowRootParent.innerHTML = htmlString;
 
   return (params: T, elements: Record<string, NodeList>) => {
-    const componentState: ComponentState = {
-      onMounted: () => {},
-      onUnmounted: () => {},
-    };
+    const componentState = new ComponentState();
     componentsContext.componentStateStack.push(componentState);
     let ctx: ComponentContext;
     const watchers = hookWatchers(() => {

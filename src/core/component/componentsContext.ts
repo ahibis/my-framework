@@ -1,7 +1,8 @@
-interface ComponentState {
-  onMounted: () => void;
-  onUnmounted: () => void;
+class ComponentState {
+  onMounted: (() => void)[] = [];
+  onUnmounted: (() => void)[] = [];
 }
+
 class ComponentsContext {
   componentStateStack: ComponentState[] = [];
   getCurrentComponentState() {
@@ -25,4 +26,4 @@ class ComponentsContext {
 }
 const componentsContext = new ComponentsContext();
 
-export { ComponentsContext, componentsContext, type ComponentState };
+export { ComponentsContext, componentsContext, ComponentState };

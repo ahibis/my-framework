@@ -1,9 +1,9 @@
 import { removeWatcher, watchFunc } from "../reactivity";
-import { componentState } from "./createComponent";
+import { ComponentState } from "./componentsContext";
 
 type HTMLElementWithContext = HTMLElement & {
   watchers?: watchFunc[];
-  componentStates?: componentState[];
+  componentStates?: ComponentState[];
 };
 function unmount(element: HTMLElementWithContext) {
   if (element.watchers) {
@@ -11,7 +11,7 @@ function unmount(element: HTMLElementWithContext) {
   }
   if (element.componentStates)
     element.componentStates.forEach((componentState) =>
-      componentState.onUnmounted()
+      componentState.onUnmounted.forEach((func) => func())
     );
   element.remove();
 }
