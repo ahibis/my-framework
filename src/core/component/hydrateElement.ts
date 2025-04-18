@@ -10,7 +10,7 @@ function evalFunc(code: string) {
 
 const directivesMap = standardDirectivesMap;
 
-type ComponentContext = Record<string, unknown>;
+type ComponentParams = Record<string, unknown>;
 type NodeWithContext = Node & {
   watchers?: watchFunc[];
   componentStates?: ComponentState[];
@@ -22,7 +22,7 @@ type ShadowRootWithParams = ShadowRoot & {
 
 function hydrateElement(
   element: NodeWithContext,
-  ctx: ComponentContext,
+  ctx: ComponentParams,
   providedElements: Record<string, NodeList>
 ) {
   const childrenQueue = [element];
@@ -204,7 +204,8 @@ function hydrateElement(
 }
 export {
   hydrateElement,
+  evalFunc,
   type NodeWithContext,
   type ShadowRootWithParams,
-  type ComponentContext,
+  type ComponentParams,
 };

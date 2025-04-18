@@ -1,14 +1,14 @@
 import { hookWatchers } from "../reactivity/hookWatchers";
 import { componentsContext, ComponentState } from "./componentsContext";
 import {
-  ComponentContext,
+  ComponentParams,
   hydrateElement,
   ShadowRootWithParams,
 } from "./hydrateElement";
 
 function createComponent<T extends object>(
   htmlString: string,
-  setup: (params: T) => ComponentContext
+  setup: (params: T) => ComponentParams
 ) {
   const element = document.createElement("div");
   const shadowRootParent = element.attachShadow({ mode: "open" });
@@ -17,7 +17,7 @@ function createComponent<T extends object>(
   return (params: T, elements: Record<string, NodeList>) => {
     const componentState = new ComponentState();
     componentsContext.componentStateStack.push(componentState);
-    let ctx: ComponentContext;
+    let ctx: ComponentParams;
     const watchers = hookWatchers(() => {
       ctx = setup(params);
     });

@@ -1,6 +1,6 @@
-import { componentsContext } from "./componentsContext";
+import { getCurrentComponentState } from "./componentsContext";
 
 function onMounted(func: () => void) {
-  componentsContext.getCurrentComponentState().onMounted.push(func);
+  getCurrentComponentState().onMounted.push(func);
 }
 export { onMounted };

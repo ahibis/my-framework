@@ -1,5 +1,6 @@
+import { evalFunc } from "../component";
 import { Signal, useSignal } from "../reactivity";
-import { createDirective, evalFunc } from "./createDirective";
+import { createDirective } from "./createDirective";
 
 let lastIfResult: Signal<boolean> | undefined = undefined;
 const dIf = createDirective("*if", (child, ctx, value) => {

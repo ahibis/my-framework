@@ -1,5 +1,6 @@
+import { evalFunc } from "../component";
 import { useSignal } from "../reactivity";
-import { createDirective, evalFunc } from "./createDirective";
+import { createDirective } from "./createDirective";
 
 const dClass = createDirective(":class", (child, ctx, value) => {
   const func = evalFunc(value);

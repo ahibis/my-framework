@@ -26,4 +26,13 @@ class ComponentsContext {
 }
 const componentsContext = new ComponentsContext();
 
-export { ComponentsContext, componentsContext, ComponentState };
+function getCurrentComponentState() {
+  return componentsContext.getCurrentComponentState();
+}
+
+export {
+  ComponentsContext,
+  componentsContext,
+  ComponentState,
+  getCurrentComponentState,
+};

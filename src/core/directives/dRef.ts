@@ -1,4 +1,5 @@
-import { createDirective, evalFunc } from "./createDirective";
+import { evalFunc } from "../component";
+import { createDirective } from "./createDirective";
 
 const dRef = createDirective("@ref", (child, ctx, value) => {
   const func = evalFunc(value);

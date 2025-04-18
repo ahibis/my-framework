@@ -9,9 +9,6 @@ interface directiveResult {
   stopHandleAttributes?: boolean;
   stopHandleChildren?: boolean;
 }
-function evalFunc(code: string) {
-  return new Function("ctx", `with(ctx){return ${code}}`);
-}
 
 type Directive = {
   name: string;
@@ -32,7 +29,6 @@ function getDirectivesMap(directives: Directive[]) {
 export { dBind } from "./dBind";
 export {
   createDirective,
-  evalFunc,
   getDirectivesMap,
   type directiveFunc,
   type Directive,

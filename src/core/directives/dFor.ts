@@ -1,6 +1,6 @@
-import { hydrateElement, unmount } from "../component";
+import { evalFunc, hydrateElement, unmount } from "../component";
 import { Signal, useSignal } from "../reactivity";
-import { createDirective, evalFunc } from "./createDirective";
+import { createDirective } from "./createDirective";
 
 const dFor = createDirective("*for", (child, ctx, value) => {
   const [valueWithKey, code] = value.split(" in ");
