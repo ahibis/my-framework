@@ -43,18 +43,19 @@ function useReactive<T extends object>(
   cachedValue: Map<keyof T, T[keyof T]> = new Map()
 ) {
   const proxy = new Proxy<T>(value, {
-    get(target, p) {
+    get(target, p, receiver) {
       if (p === "__signals__") return embeddedSignals;
       if (p === "__cache__") return cachedValue;
       if (p === "__target__") return target;
+      const value = Reflect.get(target, p, receiver) as T[keyof T];
       if (typeof p === "symbol") {
         parentSignal();
-        return target[p as keyof T];
+        return value;
       }
       if (p === "length") {
         parentSignal();
       }
-      const value = target[p as keyof T];
+
       if (value instanceof Function) {
         return value;
       }
@@ -76,7 +77,7 @@ function useReactive<T extends object>(
         target[p as keyof T] = signal();
       });
       signal();
-      return target[p as keyof T];
+      return value;
     },
     set(target, p, value) {
       const $value: T[keyof T] = value;
@@ -108,16 +109,16 @@ function useReactive<T extends object>(
     },
     deleteProperty(target, p) {
       parentSignal(target);
-      return true;
+      return Reflect.deleteProperty(target, p);
     },
     has(target, p) {
       parentSignal();
-      return true;
+      return Reflect.has(target, p);
     },
     ownKeys(target) {
       console.log("ownKeys");
       parentSignal();
-      return Reflect.ownKeys(target) as any;
+      return Reflect.ownKeys(target);
     },
   });
   const parentSignal = useSignal(proxy);
