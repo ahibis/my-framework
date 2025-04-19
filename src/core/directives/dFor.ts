@@ -1,5 +1,6 @@
 import { evalFunc, hydrateElement, unmount } from "../component";
-import { Signal, useSignal } from "../reactivity";
+import { use } from "../hooks";
+import { isReactive, Signal, toSignal, useSignal } from "../reactivity";
 import { createDirective } from "./createDirective";
 
 const dFor = createDirective("*for", (child, ctx, value) => {
@@ -15,36 +16,56 @@ const dFor = createDirective("*for", (child, ctx, value) => {
   useSignal(
     () => {
       const res = func(ctx) as string[];
+      const resIsReactive = isReactive(res);
+      res.length;
       if (isInit) {
-        reactiveValues = res.map((item) => useSignal(item));
-        elements = res.map((item, i) => {
-          const element = child.cloneNode(true) as HTMLElement;
-          hydrateElement(
-            element,
-            {
-              ...ctx,
-              [valueKey.trim()]: reactiveValues[i],
-              [indexKey.trim()]: i,
+        if (resIsReactive) {
+          useSignal(
+            () => {
+              reactiveValues = res.map((item) => toSignal(item));
             },
-            {}
+            { deps: [] }
           );
-          return element;
-        });
+        } else {
+          reactiveValues = res.map((item) => useSignal(item));
+        }
+        useSignal(
+          () => {
+            elements = res.map((item, i) => {
+              const element = child.cloneNode(true) as HTMLElement;
+              hydrateElement(
+                element,
+                {
+                  ...ctx,
+                  [valueKey.trim()]: reactiveValues[i],
+                  [indexKey.trim()]: i,
+                },
+                {}
+              );
+              return element;
+            });
+          },
+          { deps: [] }
+        );
         child.replaceWith(...elements);
         isInit = false;
         return;
       }
-      for (let i = 0; i < Math.min(res.length, elements.length); i++) {
-        reactiveValues[i](res[i]);
+      if (!resIsReactive) {
+        for (let i = 0; i < Math.min(res.length, elements.length); i++) {
+          reactiveValues[i](res[i]);
+        }
       }
+
       for (let i = res.length; i < elements.length; i++) {
         unmount(elements[i]);
+        reactiveValues.pop();
         elements.pop();
       }
       const newReactiveValues = res
         .slice(elements.length)
-        .map((item) => useSignal(item));
-      if (reactiveValues.length > 0) {
+        .map((item) => (resIsReactive ? toSignal(item) : useSignal(item)));
+      if (newReactiveValues.length > 0) {
         reactiveValues.push(...newReactiveValues);
       }
       const newElements = res.slice(elements.length).map((item, i) => {

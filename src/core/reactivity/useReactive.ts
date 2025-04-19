@@ -48,6 +48,7 @@ function useReactive<T extends object>(
       if (p === "__cache__") return cachedValue;
       if (p === "__target__") return target;
       const value = Reflect.get(target, p, receiver) as T[keyof T];
+      // console.log("get", target, p, value);
       if (typeof p === "symbol") {
         parentSignal();
         return value;
@@ -57,6 +58,7 @@ function useReactive<T extends object>(
       }
 
       if (value instanceof Function) {
+        parentSignal();
         return value;
       }
       if (value instanceof Object) {
