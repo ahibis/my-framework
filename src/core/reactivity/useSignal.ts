@@ -65,6 +65,10 @@ function wrapToConstrains<T>(
   if (options?.throttle) {
     resFunc = throttle(resFunc, options.throttle);
   }
+  if (options?.onAnimationFrame) {
+    resFunc = (value: T | computedFunc<T>) =>
+      onAnimationFrame(() => func(value));
+  }
   return resFunc;
 }
 function executeWatchers(watchers: Set<watchFunc>) {

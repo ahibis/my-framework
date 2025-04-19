@@ -1,5 +1,11 @@
 import component2 from "../component2/component2";
-import { createComponent, useSignal, onMounted, useReactive } from "../core";
+import {
+  createComponent,
+  useSignal,
+  onMounted,
+  useReactive,
+  animationFrameLoop,
+} from "../core";
 import text from "./component.html?raw";
 
 const myComponent = createComponent(text, () => {
@@ -39,6 +45,7 @@ const myComponent = createComponent(text, () => {
     someValue,
     someArr,
     multiply,
+    fps: animationFrameLoop.fps,
   };
 });
 

@@ -1,6 +1,9 @@
+import { useSignal } from "../reactivity";
+
 type watchFunc = () => void;
 class AnimationFrameLoop {
   domUpdateResolvers: (() => void)[] = [];
+  fps = useSignal(0);
   addDomUpdatePromise(promise: () => void) {
     this.domUpdateResolvers.push(promise);
   }
@@ -17,10 +20,12 @@ class AnimationFrameLoop {
         this.executeLoop();
         return;
       }
+      console.time("frame update");
       this.funcsToExecute.forEach((watcher) => watcher());
       this.funcsToExecute.clear();
       this.domUpdateResolvers.forEach((resolver) => resolver());
       this.domUpdateResolvers = [];
+      console.timeEnd("frame update");
       this.executeLoop();
     });
   }
@@ -39,4 +44,4 @@ function awaitDOMUpdate() {
   );
 }
 
-export { onAnimationFrame, awaitDOMUpdate };
+export { onAnimationFrame, awaitDOMUpdate, animationFrameLoop };
