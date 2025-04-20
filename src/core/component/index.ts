@@ -8,4 +8,3 @@ export * from "./unmount";
 export * from "./onMounted";
 export * from "./onUnmounted";
 export * from "./onHydrated";
-export * from "./onAnimationFrame";

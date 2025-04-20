@@ -1,9 +1,6 @@
-import { useSignal } from "../reactivity";
-
 type watchFunc = () => void;
 class AnimationFrameLoop {
   domUpdateResolvers: (() => void)[] = [];
-  fps = useSignal(0);
   addDomUpdatePromise(promise: () => void) {
     this.domUpdateResolvers.push(promise);
   }

@@ -1,6 +1,6 @@
 import { signalContext } from "./SignalsContext";
 import { toSignal } from "./toSignal";
-import { Signal } from "./useSignal";
+import { Signal } from "./signal";
 
 function toSafeSignal<T>(check: () => T | Signal<T>) {
   const signalBefore = signalContext.lastCalledSignal;

@@ -1,4 +1,4 @@
-import { onAnimationFrame } from "../component";
+import { onAnimationFrame } from "../helpers";
 import { debounce } from "../helpers/debounce";
 import { throttle } from "../helpers/throttle";
 import { signalContext } from "./SignalsContext";
@@ -111,8 +111,23 @@ function useSignal<T>(
   func.subscribers = new Set();
   return func;
 }
+
+function removeSignal<T>(signal: Signal<T>) {
+  signal.subscribers.forEach((watchFunc) =>
+    watchFunc.deps.delete(signal as Signal<unknown>)
+  );
+  signal.subscribers.clear();
+}
+
+function removeWatcher(watchFunc: watchFunc) {
+  watchFunc.deps.forEach((signal) => signal.subscribers.delete(watchFunc));
+  watchFunc.deps.clear();
+}
+
 export {
   useSignal,
+  removeSignal,
+  removeWatcher,
   type Signal,
   type SignalOptions,
   type computedFunc,

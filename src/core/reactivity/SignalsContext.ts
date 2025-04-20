@@ -1,4 +1,4 @@
-import { Signal, watchFunc } from "./useSignal";
+import { Signal, watchFunc } from "./signal";
 
 class SignalContext {
   currentWatchFunc?: watchFunc;
@@ -42,4 +42,10 @@ const signalContext = new SignalContext();
 function getLastRegisteredWatcher() {
   return signalContext.lastRegisteredWatcher;
 }
-export { signalContext, getLastRegisteredWatcher };
+function hookWatchers(func: () => void) {
+  const offset = signalContext.startWatchersHook();
+  func();
+  return signalContext.endWatchersHook(offset);
+}
+
+export { signalContext, getLastRegisteredWatcher, hookWatchers };

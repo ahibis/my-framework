@@ -1,4 +1,4 @@
-import { SignalOptions } from "./useSignal";
+import { SignalOptions } from "./signal";
 
 type Hooks<T> = {
   onUpdate: (value: Record<keyof T, T[keyof T]>) => void;

@@ -1,5 +1,4 @@
-import { useSignal } from "../reactivity";
-import { hookWatchers } from "../reactivity/hookWatchers";
+import { hookWatchers, useSignal } from "../reactivity";
 import { componentsContext, ComponentState } from "./componentsContext";
 import {
   ComponentParams,

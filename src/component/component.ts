@@ -38,7 +38,6 @@ const myComponent = createComponent(text, () => {
     someValue,
     someArr,
     multiply,
-    fps: animationFrameLoop.fps,
   };
 });
 

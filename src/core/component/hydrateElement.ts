@@ -1,8 +1,8 @@
 import { standardDirectivesMap } from "../directives";
+import { onAnimationFrame } from "../helpers";
 import { useSignal, watchFunc } from "../reactivity";
 import { hookWatchers } from "../reactivity";
 import { componentsContext, ComponentState } from "./componentsContext";
-import { onAnimationFrame } from "./onAnimationFrame";
 import { replaceMount } from "./replaceMount";
 
 function evalFunc(code: string) {

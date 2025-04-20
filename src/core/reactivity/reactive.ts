@@ -1,11 +1,5 @@
-import { use } from "../hooks";
-import { removeWatcher } from "./removeWatcher";
 import { getLastRegisteredWatcher } from "./SignalsContext";
-import { Signal, useSignal, watchFunc } from "./useSignal";
-
-let lastManipulation:
-  | [Record<string | symbol, unknown>, string | symbol]
-  | undefined;
+import { removeWatcher, Signal, useSignal, watchFunc } from "./signal";
 
 type EmbeddedSignals<T> = Map<
   string | symbol,
@@ -15,7 +9,7 @@ type EmbeddedSignals<T> = Map<
   }
 >;
 
-function handleObject<T extends object>(value: T, prevValue: ProxyObject<T>) {
+function handleObject<T extends object>(value: T, prevValue: Reactive<T>) {
   const target = prevValue.__target__;
   if (value === target) {
     return prevValue;
@@ -51,24 +45,35 @@ function handleObject<T extends object>(value: T, prevValue: ProxyObject<T>) {
         key as keyof T,
         handleObject(
           childValue,
-          cache.get(key as keyof T)! as ProxyObject<NonNullable<T[keyof T]>>
-        ) as ProxyObject<NonNullable<T[keyof T]>>
+          cache.get(key as keyof T)! as Reactive<NonNullable<T[keyof T]>>
+        ) as Reactive<NonNullable<T[keyof T]>>
       );
     }
   }
-  return useReactive(value, signals, newCache);
+  return useReactive(value, {
+    embeddedSignals: signals,
+    cachedValue: newCache,
+  });
 }
 
-type ProxyObject<T> = T & {
+type Reactive<T> = T & {
   __signals__: EmbeddedSignals<T>;
   __cache__: Map<keyof T, T[keyof T]>;
   __target__: T;
 };
+type ReactiveOptions<T> = {
+  embeddedSignals: EmbeddedSignals<T>;
+  cachedValue: Map<keyof T, T[keyof T]>;
+};
+
 function useReactive<T extends object>(
   value: T,
-  embeddedSignals: EmbeddedSignals<T> = new Map(),
-  cachedValue: Map<keyof T, T[keyof T]> = new Map()
+  reactiveOptions?: ReactiveOptions<T>
 ) {
+  const { embeddedSignals, cachedValue } = reactiveOptions || {
+    embeddedSignals: new Map(),
+    cachedValue: new Map(),
+  };
   const proxy = new Proxy<T>(value, {
     get(target, p, receiver) {
       if (p === "__signals__") return embeddedSignals;
@@ -92,7 +97,7 @@ function useReactive<T extends object>(
         if (cachedValue.has(p as keyof T)) {
           return cachedValue.get(p as keyof T);
         }
-        const newValue = useReactive(value, new Map());
+        const newValue = useReactive(value);
         cachedValue.set(p as keyof T, newValue);
         return newValue;
       }
@@ -119,17 +124,12 @@ function useReactive<T extends object>(
             p as keyof T,
             handleObject(
               $value,
-              cachedValue.get(p as keyof T) as ProxyObject<
-                NonNullable<T[keyof T]>
-              >
+              cachedValue.get(p as keyof T) as Reactive<NonNullable<T[keyof T]>>
             )
           );
           return true;
         }
-        cachedValue.set(
-          p as keyof T,
-          useReactive($value, new Map(), new Map())
-        );
+        cachedValue.set(p as keyof T, useReactive($value));
         return true;
       }
       if (embeddedSignals.has(p)) {
@@ -157,10 +157,28 @@ function useReactive<T extends object>(
     },
   });
   const parentSignal = useSignal(proxy);
-  return proxy as ProxyObject<T>;
+  return proxy as Reactive<T>;
 }
 
-function getLastManipulation() {
-  return lastManipulation;
+function compareReactive<T, T1>(a: Reactive<T>, b: Reactive<T1>) {
+  return (a.__signals__ as unknown) === (b.__signals__ as unknown);
 }
-export { useReactive, getLastManipulation };
+function fromReactive<T>(value: Reactive<T>): T {
+  return value.__target__;
+}
+function isReactive<T extends object>(value: T): value is Reactive<T> {
+  return (value as T & { __target__?: unknown }).__target__ !== undefined;
+}
+function useReactiveSignal<T extends object>(value: T) {
+  return useSignal(useReactive(value));
+}
+
+export {
+  useReactive,
+  compareReactive,
+  isReactive,
+  fromReactive,
+  useReactiveSignal,
+  type Reactive,
+  type EmbeddedSignals,
+};
