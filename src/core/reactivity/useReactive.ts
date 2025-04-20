@@ -1,10 +1,22 @@
-import { Signal, useSignal } from "./useSignal";
+import { use } from "../hooks";
+import {
+  getLastRegisteredWatcher,
+  Signal,
+  useSignal,
+  watchFunc,
+} from "./useSignal";
 
 let lastManipulation:
   | [Record<string | symbol, unknown>, string | symbol]
   | undefined;
 
-type EmbeddedSignals<T> = Map<string | symbol, Signal<T[keyof T]>>;
+type EmbeddedSignals<T> = Map<
+  string | symbol,
+  {
+    s: Signal<T[keyof T]>;
+    w: watchFunc;
+  }
+>;
 
 function handleObject<T extends object>(value: T, prevValue: ProxyObject<T>) {
   const target = prevValue.__target__;
@@ -15,7 +27,23 @@ function handleObject<T extends object>(value: T, prevValue: ProxyObject<T>) {
   const cache = prevValue.__cache__;
   const newCache = new Map<keyof T, T[keyof T]>();
   for (let key in signals) {
-    signals.get(key)!(value[key as keyof T]);
+    if (!(key in value)) {
+      signals.delete(key);
+      continue;
+    }
+    const signalCtx = signals.get(key)!;
+    const s = signalCtx.s;
+    const w = signalCtx.w;
+    s.subscribers.delete(w);
+    useSignal(
+      () => {
+        value[key as keyof T] = s();
+      },
+      { deps: [...w.deps, s] }
+    );
+    const newWatcher = getLastRegisteredWatcher()!;
+    signals.set(key, { s, w: newWatcher });
+    s(value[key as keyof T]);
   }
   for (let key in cache) {
     const childValue = value[key as keyof T]!;
@@ -70,15 +98,17 @@ function useReactive<T extends object>(
         return newValue;
       }
 
-      let signal = embeddedSignals.get(p);
-      if (signal == undefined) {
-        signal = useSignal(value);
-        embeddedSignals.set(p, signal);
+      let embeddedSignal = embeddedSignals.get(p);
+      if (embeddedSignal == undefined) {
+        const signal = useSignal(value);
+        useSignal(() => {
+          target[p as keyof T] = signal();
+        });
+        const watcher = getLastRegisteredWatcher()!;
+        embeddedSignal = { s: signal, w: watcher };
+        embeddedSignals.set(p, embeddedSignal);
       }
-      useSignal(() => {
-        target[p as keyof T] = signal();
-      });
-      signal();
+      embeddedSignal.s();
       return value;
     },
     set(target, p, value) {
@@ -104,12 +134,15 @@ function useReactive<T extends object>(
         return true;
       }
       if (embeddedSignals.has(p)) {
-        embeddedSignals.get(p)!(value);
+        embeddedSignals.get(p)!.s(value);
       }
 
       return true;
     },
     deleteProperty(target, p) {
+      if (embeddedSignals.has(p)) {
+        embeddedSignals.delete(p);
+      }
       parentSignal(target);
       return Reflect.deleteProperty(target, p);
     },

@@ -38,7 +38,9 @@ class SignalContext {
   }
   watcherHooksRun = 0;
   hookWatchers: watchFunc[] = [];
-  addWatcherHook(watchFunc: watchFunc) {
+  lastRegisteredWatcher: watchFunc | undefined;
+  registerWatcher(watchFunc: watchFunc) {
+    this.lastRegisteredWatcher = watchFunc;
     this.hookWatchers.push(watchFunc);
   }
   startWatchersHook() {
@@ -53,6 +55,9 @@ class SignalContext {
   }
 }
 const signalContext = new SignalContext();
+function getLastRegisteredWatcher() {
+  return signalContext.lastRegisteredWatcher;
+}
 
 function wrapToConstrains<T>(
   func: (value1: T | computedFunc<T>) => void,
@@ -100,7 +105,7 @@ function useSignal<T>(
       execSubscribes(func.subscribers);
     }, options) as watchFunc;
     wrappedFunc.deps = new Set();
-    signalContext.addWatcherHook(wrappedFunc);
+    signalContext.registerWatcher(wrappedFunc);
     if (options?.deps) {
       const fakeWatcher: watchFunc = () => {};
       fakeWatcher.deps = new Set();
@@ -151,6 +156,7 @@ function useSignal<T>(
 export {
   useSignal,
   signalContext,
+  getLastRegisteredWatcher,
   type Signal,
   type SignalOptions,
   type computedFunc,
