@@ -1,4 +1,5 @@
-import { Signal, signalContext } from "./useSignal";
+import { signalContext } from "./SignalsContext";
+import { Signal } from "./useSignal";
 
 function toSignal<T>(value: T | Signal<T>): Signal<T> {
   if (value instanceof Function) return value;

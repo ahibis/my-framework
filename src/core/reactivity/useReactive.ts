@@ -1,10 +1,7 @@
 import { use } from "../hooks";
-import {
-  getLastRegisteredWatcher,
-  Signal,
-  useSignal,
-  watchFunc,
-} from "./useSignal";
+import { removeWatcher } from "./removeWatcher";
+import { getLastRegisteredWatcher } from "./SignalsContext";
+import { Signal, useSignal, watchFunc } from "./useSignal";
 
 let lastManipulation:
   | [Record<string | symbol, unknown>, string | symbol]
@@ -27,11 +24,13 @@ function handleObject<T extends object>(value: T, prevValue: ProxyObject<T>) {
   const cache = prevValue.__cache__;
   const newCache = new Map<keyof T, T[keyof T]>();
   for (let key in signals) {
+    const signalCtx = signals.get(key)!;
     if (!(key in value)) {
+      removeWatcher(signalCtx.w);
       signals.delete(key);
       continue;
     }
-    const signalCtx = signals.get(key)!;
+
     const s = signalCtx.s;
     const w = signalCtx.w;
     s.subscribers.delete(w);
@@ -141,6 +140,7 @@ function useReactive<T extends object>(
     },
     deleteProperty(target, p) {
       if (embeddedSignals.has(p)) {
+        removeWatcher(embeddedSignals.get(p)!.w);
         embeddedSignals.delete(p);
       }
       parentSignal(target);

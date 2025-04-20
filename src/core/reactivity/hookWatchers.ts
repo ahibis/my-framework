@@ -1,4 +1,4 @@
-import { signalContext } from "./useSignal";
+import { signalContext } from "./SignalsContext";
 
 function hookWatchers(func: () => void) {
   const offset = signalContext.startWatchersHook();

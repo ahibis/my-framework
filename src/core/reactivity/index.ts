@@ -6,3 +6,5 @@ export * from "./hookWatchers";
 export * from "./toSignal";
 export * from "./toSafeSignal";
 export * from "./isReactive";
+export * from "./removeSignal";
+export * from "./SignalsContext";

@@ -18,7 +18,13 @@ export default createComponent<{ test: string }>(html, ({ test }) => {
       test3: "test3",
     },
   });
-
+  obj.test2 = {
+    test3: "test6",
+  };
+  useSignal(() => {
+    // console.log("obj.test2.test3", obj.test2.test3);
+    // console.log(obj.test2);
+  });
   onMounted(() => {
     console.log("отрисовался элемент 2");
   });
