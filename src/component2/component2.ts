@@ -18,6 +18,7 @@ export default createComponent<{ test: string }>(html, ({ test }) => {
       test3: "test3",
     },
   });
+
   obj.test2 = {
     test3: "test6",
   };
