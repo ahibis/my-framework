@@ -17,10 +17,13 @@ function handleObject<
   if (value === target) {
     return prevValue;
   }
+
   const signals = prevValue.__signals__;
   const cache = prevValue.__cache__;
   const parent = prevValue.__parent__;
+  const changeSignal = prevValue.__changeSignal__;
   const newCache = new Map<keyof T, T[keyof T]>();
+
   for (let key in signals) {
     const signalCtx = signals.get(key as keyof T)!;
     if (!(key in value)) {
@@ -42,6 +45,7 @@ function handleObject<
     signals.set(key as keyof T, { s, w: newWatcher });
     s(value[key as keyof T]);
   }
+
   for (let key in cache) {
     const childValue = value[key as keyof T]!;
     if (childValue) {
@@ -54,6 +58,22 @@ function handleObject<
       );
     }
   }
+
+  const changeSignalData = {} as Partial<T>;
+  for (let key in value) {
+    const childValue = value[key as keyof T]!;
+    if (!((childValue as keyof T) in target)) {
+      changeSignalData[key as keyof T] = childValue;
+    }
+  }
+  for (let key in target) {
+    const childValue = target[key as keyof T]!;
+    if (!((childValue as keyof T) in value)) {
+      changeSignalData[key as keyof T] = undefined;
+    }
+  }
+  changeSignal(changeSignalData);
+
   return useReactive(value, {
     embeddedSignals: signals,
     cachedValue: newCache,
@@ -67,6 +87,7 @@ type Reactive<T, T1 extends object | undefined = undefined> = T & {
   __target__: T;
   __parent__: Reactive<T1>;
   __signal__?: Signal<Reactive<T1>>;
+  __changeSignal__: Signal<Partial<T>>;
 };
 type ReactiveOptions<T, T1 extends object | undefined = undefined> = {
   embeddedSignals: EmbeddedSignals<T>;
@@ -83,6 +104,7 @@ function useReactive<
     embeddedSignals: new Map(),
     cachedValue: new Map(),
   };
+
   const proxy = new Proxy<T>(value, {
     get(target, p1, receiver) {
       const p = p1 as keyof T;
@@ -90,39 +112,45 @@ function useReactive<
       if (p === "__cache__") return cachedValue;
       if (p === "__target__") return target;
       if (p === "__parent__") return reactiveOptions?.parent;
+      if (p === "__changeSignal__") return changeSignal;
       const value = Reflect.get(target, p, receiver) as T[keyof T];
       if (p === "__signal__") {
-        if (reactiveOptions?.parent && key) {
-          const signal = parent?.__signals__.get(key);
+        if (parent != undefined && key) {
+          const signal = parent.__signals__.get(key);
           if (signal) {
             return signal.s;
           }
           const s = useSignal(proxy) as Signal<T1[keyof T1]>;
-          useSignal(() => {});
+          useSignal(() => {
+            (parent.__target__ as NonNullable<T1>)[key as keyof T1] =
+              s() as NonNullable<T1>[keyof T1];
+          });
           const w = getLastRegisteredWatcher()!;
-          // embeddedSignals.set(p, { s, w });
-          parent?.__signals__.set(key, { s, w });
+          parent.__signals__.set(key, { s, w });
         }
         return undefined;
       }
       // console.log("get", target, p, value);
       if (typeof p === "symbol") {
-        parentSignal();
+        changeSignal();
         return value;
       }
       if (p === "length") {
-        parentSignal();
+        changeSignal();
       }
 
       if (value instanceof Function) {
-        parentSignal();
         return value;
       }
       if (value instanceof Object) {
         if (cachedValue.has(p as keyof T)) {
           return cachedValue.get(p as keyof T);
         }
-        const newValue = useReactive(value);
+        const newValue = useReactive<T[keyof T] & object, T>(value, {
+          cachedValue: new Map(),
+          embeddedSignals: new Map(),
+          parent: proxy as Reactive<T>,
+        });
         cachedValue.set(p as keyof T, newValue);
         return newValue;
       }
@@ -140,22 +168,34 @@ function useReactive<
       embeddedSignal.s();
       return value;
     },
+
     set(target, p1, value) {
-      const $value: T[keyof T] = value;
+      let $value: T[keyof T] = value;
       const p = p1 as keyof T;
+      if (!(p in target)) {
+        changeSignal({ [p as keyof T]: $value } as Partial<T>);
+      }
       target[p as keyof T] = $value;
       if ($value instanceof Object) {
+        if (($value as Reactive<T[keyof T]>).__target__) {
+          $value = ($value as Reactive<T[keyof T]>).__target__ as T[keyof T] &
+            object;
+        }
+
         if (cachedValue.has(p as keyof T)) {
           cachedValue.set(
             p as keyof T,
             handleObject(
-              $value,
+              $value as T[keyof T] & object,
               cachedValue.get(p as keyof T) as Reactive<NonNullable<T[keyof T]>>
             )
           );
           return true;
         }
-        cachedValue.set(p as keyof T, useReactive($value));
+        cachedValue.set(
+          p as keyof T,
+          useReactive($value as T[keyof T] & object)
+        );
         return true;
       }
       if (embeddedSignals.has(p)) {
@@ -169,20 +209,22 @@ function useReactive<
         removeWatcher(embeddedSignals.get(p as keyof T)!.w);
         embeddedSignals.delete(p as keyof T);
       }
-      parentSignal(target);
+      changeSignal({ [p as keyof T]: undefined } as Partial<T>);
       return Reflect.deleteProperty(target, p);
     },
     has(target, p) {
-      parentSignal();
+      changeSignal();
       return Reflect.has(target, p);
     },
     ownKeys(target) {
       console.log("ownKeys");
-      parentSignal();
+      changeSignal();
       return Reflect.ownKeys(target);
     },
   } as ProxyHandler<T>);
-  const parentSignal = useSignal(proxy);
+
+  const changeSignal = useSignal<Partial<T>>(proxy);
+
   return proxy as Reactive<T>;
 }
 
