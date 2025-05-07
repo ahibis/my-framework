@@ -65,9 +65,7 @@ function useSignal<T>(
     wrappedFunc.deps = new Set();
     signalContext.registerWatcher(wrappedFunc);
     if (options?.deps) {
-      const fakeWatcher: watchFunc = () => {};
-      fakeWatcher.deps = new Set();
-      signalContext.startRecord(fakeWatcher);
+      signalContext.startRecord(undefined);
       $value = f($value!);
       signalContext.endRecord();
       options.deps.forEach((signal) => {
